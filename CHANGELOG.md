@@ -22,5 +22,10 @@ Primera versión.
 - `/fichas [proyecto]`: Claude rellena en solo lectura lo que falta en las fichas (fase, estado, tareas, próximos pasos), preguntando a una bifurcación de la sesión del proyecto si está en pausa, o a un `claude -p` en su repo. No toca lo que ya hayas escrito.
 - `/proyecto [tests]`, `/preguntar` (solo lectura, con bifurcación de la sesión si se puede), `/abrir` (Windows Terminal), `/registro` y `/cierre`.
 
+### Vista web
+- `/huddle web`: el Panel y la Oficina en el navegador, en un único fichero autocontenido que relee `datos.js` cada 2 s.
+- Escenas de la Oficina: **Clásica**, **Isométrica** (planta abierta en 2,5D, una sala por proyecto) y **Torre** (edificio en corte, una planta por proyecto, azotea, sótano y ascensor), en canvas 2D. Los personajes salen de los datos reales y caminan según su estado; un subagente que cambia de actividad va a la estantería o al archivo y vuelve.
+- Detalle de cada sesión y subagente al hacer clic en un personaje o en el árbol «Ejecutándose ahora».
+
 ### Alertas
 - Contexto ≥ 80 %, sesión esperando más de 5 min, commits sin push, cambios sin commitear más de 3 días, CI en rojo (con `gh`) y carpetas sin clasificar.

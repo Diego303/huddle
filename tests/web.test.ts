@@ -4,7 +4,7 @@ import type { On } from 'claude-code'
 
 import type { ModeloWeb } from '../lib/web.ts'
 import { argvAbrirNavegador, huella, lineaDatos, modeloWeb } from '../lib/web.ts'
-import { AHORA, datos, sesion } from './ayuda/ejemplo.ts'
+import { AHORA, datos, sesion, SESIONES as SESIONES_EJ } from './ayuda/ejemplo.ts'
 import { crearSistema, DASHBOARD, instalarSistema } from './ayuda/sistema-falso.ts'
 import type { SistemaFalso } from './ayuda/sistema-falso.ts'
 
@@ -89,6 +89,64 @@ describe('el modelo de la web (datos.js)', () => {
     expect(v.actividad.nota).toBe('commits n/d (sin /refresh)')
     expect(v.actividad.dias.every(d => d.vacio)).toBe(true)
     expect(v.arbol).toEqual([])
+  })
+
+  test('escenas: una sala por proyecto en seguimiento, GENERAL y, si hace falta, «otros»', () => {
+    expect(m.escenas.salas.map(s => [s.clave, s.nombre, s.tipo, s.texto])).toEqual([
+      ['p:struo', 'struo', 'proyecto', '71%'],
+      ['p:proyecto-b', 'proyecto-b', 'proyecto', '90%'],
+      ['p:proyecto-c', 'proyecto-c', 'proyecto', '—'],
+      ['general', 'GENERAL', 'general', 'torre de control'],
+    ])
+    const fuera = sesion('o', { tipo: 'otros', proyecto: 'notas', cwd: '/r/notas' })
+    const nuevo = sesion('n', { proyecto: 'sin-seguir' })
+    const conOtros = modeloWeb(datos({ sesiones: [...SESIONES_EJ, fuera, nuevo] }), AHORA, 'x')
+    expect(conOtros.escenas.salas.at(-1)?.clave).toBe('otros')
+    expect(conOtros.escenas.sesiones.filter(p => p.sala === 'otros').map(p => p.proyecto).sort()).toEqual(['otros · notas', 'sin-seguir'])
+  })
+
+  test('escenas: personajes de los dos modos, con color de proyecto o de rol y su sesión', () => {
+    expect(m.escenas.sesiones.map(p => [p.id, p.sala, p.estado, p.color])).toEqual([
+      ['struo · feat-export', 'p:struo', 'a', '#7F77DD'],
+      ['struo · feat-auth', 'p:struo', 'w', '#7F77DD'],
+      ['proyecto-b · main', 'p:proyecto-b', 'p', '#1D9E75'],
+      ['proyecto-c · main', 'p:proyecto-c', 'i', '#D85A30'],
+    ])
+    const sub = m.escenas.agentes.find(p => p.sub)!
+    const lider = m.escenas.agentes.find(p => p.clave === sub.lider)!
+    expect(sub).toMatchObject({ id: 'STR-explore-01', rol: 'explore', estado: 'w', actividad: 'Bash · rg', color: '#7F77DD', sala: 'p:struo' })
+    expect(lider).toMatchObject({ id: 'STR-lead-01', rol: 'lead', sub: false, color: '#D85A30' })
+    // La misma clave para la misma sesión en los dos modos y en el árbol del Panel.
+    expect(m.escenas.sesiones.map(p => p.clave).sort()).toEqual(m.escenas.agentes.filter(p => !p.sub).map(p => p.clave).sort())
+    expect(m.arbol.map(r => r.clave).sort()).toEqual(m.escenas.agentes.map(p => p.clave).sort())
+  })
+
+  test('las claves no dependen del orden ni de la numeración de los IDs', () => {
+    // Sin la sesión «a», feat-export pasa de STR-lead-02 a STR-lead-01, pero su clave es la misma.
+    const sinA = modeloWeb(datos({ sesiones: SESIONES_EJ.filter(s => s.session_id !== 'a') }), AHORA, 'x')
+    const clave = (mm: ModeloWeb, id: string) => mm.escenas.agentes.find(p => p.id === id)?.clave
+    expect(clave(sinA, 'STR-lead-01')).toBe(clave(m, 'STR-lead-02'))
+    expect(new Set(m.escenas.agentes.map(p => p.clave)).size).toBe(m.escenas.agentes.length)
+  })
+
+  test('el detalle de una sesión y de un subagente', () => {
+    const espera = m.escenas.sesiones.find(p => p.id === 'struo · feat-export')!
+    const d = m.detalles[espera.clave]!
+    expect(d).toMatchObject({ titulo: 'struo/feat-export', subtitulo: 'sesión · STR-lead-02', estado: 'a', estadoTexto: 'te espera · hace 8m' })
+    expect(d.filas).toContainEqual(['Contexto', '83%'])
+    expect(d.filas).toContainEqual(['Rama', 'feat-export'])
+    expect(d.filas).toContainEqual(['Modelo', 'n/d'])
+    const sub = m.escenas.agentes.find(p => p.sub)!
+    expect(m.detalles[sub.clave]).toMatchObject({ titulo: 'STR-explore-01', subtitulo: 'explore · subagente de STR-lead-01', estadoTexto: 'trabajando' })
+    expect(m.detalles[sub.clave]!.filas).toEqual([
+      ['Tarea', 'usos de token'],
+      ['Actividad', 'Bash · rg'],
+      ['Sesión', 'struo/feat-auth'],
+      ['Proyecto', 'struo'],
+      ['En marcha', 'hace 26m'],
+    ])
+    const dormida = m.escenas.sesiones.find(p => p.estado === 'i')!
+    expect(m.detalles[dormida.clave]?.estadoTexto).toBe('inactiva · 3h 46m')
   })
 
   test('una sola línea `window.HUDDLE = {...}` y una versión que solo cambia con el contenido', () => {

@@ -66,6 +66,25 @@ button:hover{background:var(--surface-1)}
 .pie{display:flex;justify-content:space-between;margin-top:10px;font-size:11px}
 .vivo{color:#1D9E75}
 .parado{color:#BA7517}
+.sep{display:inline-block;width:1px;height:18px;background:var(--border-strong);margin:0 3px;align-self:center}
+.md{flex-wrap:wrap;align-items:center}
+#v-oficina>.cab{align-items:flex-start}
+#escena-desc{font-size:11px;margin:-4px 0 8px}
+.escena{position:relative}
+.lienzo{overflow-x:hidden;overflow-y:auto;border-radius:10px;border:.5px solid var(--border)}
+.lienzo canvas{display:block;width:100%}
+.tip{position:absolute;z-index:2;pointer-events:none;background:var(--surface-2);border:.5px solid var(--border-strong);border-radius:8px;padding:6px 8px;font-size:11px;line-height:1.5;min-width:150px;max-width:280px;box-shadow:0 2px 8px rgba(0,0,0,.12);overflow-wrap:anywhere}
+.escena-vacia{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.escena-vacia span{background:var(--surface-2);border:.5px solid var(--border);border-radius:8px;padding:6px 12px;color:var(--text-secondary);font-size:12px}
+.arbol .fila{cursor:pointer;border-radius:4px}
+.arbol .fila:hover,.arbol .fila:focus-visible{background:var(--surface-1);outline:none}
+dialog.detalle{padding:0;border:.5px solid var(--border-strong);border-radius:12px;background:var(--surface-2);color:var(--text-primary);width:min(440px,calc(100% - 32px));box-shadow:0 8px 30px rgba(0,0,0,.25)}
+dialog.detalle::backdrop{background:rgba(0,0,0,.28)}
+.det{padding:12px 14px}
+.det table{border-collapse:collapse;width:100%;margin-top:8px;font-size:11px}
+.det td{padding:4px 0;vertical-align:top;border-top:.5px solid var(--border)}
+.det td:first-child{color:var(--text-secondary);width:104px;padding-right:8px}
+.det td:last-child{overflow-wrap:anywhere}
 [hidden]{display:none!important}
 @media (max-width:640px){.g-sup,.g-dos,.salas{grid-template-columns:minmax(0,1fr)}.g-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.room.ancha{grid-column:auto}}
 </style>
@@ -115,10 +134,33 @@ button:hover{background:var(--surface-1)}
   </section>
 
   <section id="v-oficina" hidden>
-    <div class="cab"><div class="md" id="modos"><button id="modo-sesiones" class="on">Modo sesiones</button><button id="modo-agentes">Modo agentes</button></div><div class="mut" id="resumen"></div></div>
+    <div class="cab">
+      <div class="md" id="modos">
+        <button data-escena="clasica">Clásica</button><button data-escena="iso">Isométrica</button><button data-escena="torre">Torre</button>
+        <span class="sep"></span>
+        <button id="modo-sesiones" class="on">Modo sesiones</button><button id="modo-agentes">Modo agentes</button>
+        <span class="sep" id="sep-etiquetas"></span><button id="etiquetas">etiquetas</button>
+      </div>
+      <div class="mut" id="resumen"></div>
+    </div>
+    <div class="mut" id="escena-desc"></div>
     <div class="salas" id="salas"></div>
+    <div class="escena" id="escena" hidden>
+      <div class="lienzo" id="lienzo"><canvas id="cv" aria-label="Oficina: personajes por sesión y agente"></canvas></div>
+      <div class="tip" id="tip" hidden></div>
+      <div class="escena-vacia" id="escena-vacia" hidden><span>Nadie trabajando ahora · abre una sesión de Claude Code</span></div>
+    </div>
     <div class="mut" style="margin-top:10px;font-size:11px"><span style="color:#1D9E75">●</span> trabajando <span style="color:#BA7517">●</span> espera aprobación <span style="color:#B4B2A9">●</span> en pausa <span style="color:#888780">●</span> inactivo · rol: <span style="color:#D85A30">■</span> lead <span style="color:#7F77DD">■</span> explore <span style="color:#378ADD">■</span> plan <span style="color:#1D9E75">■</span> tests</div>
   </section>
+
+  <dialog class="detalle t" id="detalle" aria-labelledby="det-titulo">
+    <div class="det">
+      <div class="fila"><span><b id="det-titulo"></b> <span class="mut" style="font-size:11px" id="det-sub"></span></span><button id="det-cerrar" aria-label="Cerrar">✕</button></div>
+      <div style="margin-top:6px" id="det-estado"></div>
+      <table><tbody id="det-filas"></tbody></table>
+      <div class="vacio" style="margin-top:8px" id="det-nota"></div>
+    </div>
+  </dialog>
 
   <div class="pie mut"><span id="vivo"><span class="parado">●</span> esperando datos.js…</span><span id="pie"></span></div>
 </div>
@@ -145,12 +187,48 @@ button:hover{background:var(--surface-1)}
     $('tab-oficina').classList.toggle('on', vista === 'oficina')
     $('modo-sesiones').classList.toggle('on', modo === 'sesiones')
     $('modo-agentes').classList.toggle('on', modo === 'agentes')
+    const lienzo = escena !== 'clasica'
+    document.querySelectorAll('[data-escena]').forEach(b => b.classList.toggle('on', b.dataset.escena === escena))
+    $('etiquetas').classList.toggle('on', etiquetas)
+    $('etiquetas').hidden = $('sep-etiquetas').hidden = !lienzo
+    $('salas').hidden = lienzo
+    $('escena').hidden = !lienzo
+    $('escena-desc').hidden = !lienzo
+    $('escena-desc').textContent = Motor.desc(escena)
     history.replaceState(null, '', '#' + vista + (vista === 'oficina' ? '-' + modo : ''))
+    Motor.actualizarActivo()
   }
   $('tab-panel').onclick = () => { vista = 'panel'; mostrar() }
   $('tab-oficina').onclick = () => { vista = 'oficina'; mostrar() }
-  $('modo-sesiones').onclick = () => { modo = 'sesiones'; mostrar(); if (H) bloques.oficina(H) }
-  $('modo-agentes').onclick = () => { modo = 'agentes'; mostrar(); if (H) bloques.oficina(H) }
+  const cambiarModo = m => { modo = m; guardar(); mostrar(); if (H) { bloques.oficina(H); Motor.sincronizar(H) } }
+  $('modo-sesiones').onclick = () => cambiarModo('sesiones')
+  $('modo-agentes').onclick = () => cambiarModo('agentes')
+  document.querySelectorAll('[data-escena]').forEach(b => { b.onclick = () => { escena = b.dataset.escena; guardar(); mostrar(); if (H) Motor.sincronizar(H) } })
+  $('etiquetas').onclick = () => { etiquetas = !etiquetas; guardar(); mostrar() }
+
+  // --- el detalle de una sesión o un subagente: desde el árbol del Panel o desde un personaje
+  let abierto = null
+  function abrirDetalle(clave) {
+    abierto = clave
+    pintarDetalle()
+    const d = $('detalle')
+    if (!d.open) d.showModal()
+  }
+  function pintarDetalle() {
+    if (abierto === null) return
+    const x = H && H.detalles ? H.detalles[abierto] : null
+    $('det-nota').textContent = x ? '' : 'Ya no está en marcha.'
+    if (!x) return
+    $('det-titulo').textContent = x.titulo
+    $('det-sub').textContent = x.subtitulo
+    $('det-estado').innerHTML = `<span style="color:${COLOR[x.estado]}">●</span> ${esc(x.estadoTexto)}`
+    $('det-filas').innerHTML = x.filas.map(([k, v]) => `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`).join('')
+  }
+  $('detalle').addEventListener('close', () => { abierto = null })
+  $('detalle').addEventListener('click', e => { if (e.target === $('detalle')) $('detalle').close() })
+  $('det-cerrar').onclick = () => $('detalle').close()
+  $('arbol').addEventListener('click', e => { const f = e.target.closest('[data-clave]'); if (f) abrirDetalle(f.dataset.clave) })
+  $('arbol').addEventListener('keydown', e => { const f = e.target.closest('[data-clave]'); if (f && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); abrirDetalle(f.dataset.clave) } })
 
   const barra = (pct, color, alto) => `<div class="bar"${alto ? ` style="height:${alto}px"` : ''}><i style="width:${pct === null ? 0 : pct}%;background:${color}"></i></div>`
   const icono = e => e === 'w' ? '<span class="sp">◐</span>' : e === 'a' ? '<span style="color:var(--text-warning)">⏸</span>' : e === 'i' ? '<span class="mut">z</span>' : '<span class="mut">·</span>'
@@ -188,6 +266,471 @@ button:hover{background:var(--surface-1)}
     return `<svg width="64" height="56" viewBox="0 0 16 14" style="image-rendering:pixelated" aria-hidden="true"><rect x="9" y="3" width="6" height="4" fill="#2C2C2A"/>${scr}<rect x="11.5" y="7" width="1" height="1" fill="#5F5E5A"/><rect x="0" y="8" width="16" height="1" fill="#B4B2A9"/><rect x="1" y="9" width="1" height="5" fill="#B4B2A9"/><rect x="14" y="9" width="1" height="5" fill="#B4B2A9"/>${p}</svg>`
   }
 
+  // ===================================================================
+  // Oficina · escenas Isométrica y Torre. Canvas 2D a mano, con los datos de
+  // H.escenas: cada personaje es una sesión (o un subagente, en modo agentes)
+  // y camina a su sitio cuando cambia su estado. Nada se simula.
+  // ===================================================================
+  const NOMBRE_ESTADO = { w: 'trabajando', a: 'te espera', p: 'en pausa', i: 'inactiva' }
+  const guardado = (() => {
+    try { return JSON.parse(localStorage.getItem('huddle.oficina') || '{}') || {} } catch (e) { return {} }
+  })()
+  let escena = ['clasica', 'iso', 'torre'].includes(guardado.escena) ? guardado.escena : 'clasica'
+  let etiquetas = guardado.etiquetas !== false
+  if (h[0] !== 'oficina' && (guardado.modo === 'sesiones' || guardado.modo === 'agentes')) modo = guardado.modo
+  function guardar() {
+    try { localStorage.setItem('huddle.oficina', JSON.stringify({ escena, modo, etiquetas })) } catch (e) { /* sin localStorage: no se recuerda */ }
+  }
+
+  const Motor = (() => {
+    const W = 860
+    const cv = $('cv'), lienzo = $('lienzo'), caja = $('escena'), tip = $('tip')
+    const ctx = cv.getContext('2d')
+    const FUENTE = 'ui-monospace,"Cascadia Mono",Consolas,monospace'
+
+    // --- paletas de la maqueta, en claro y en oscuro (siguen al sistema en vivo)
+    const CLARO = { oscuro: false, fondo: '#f7f5ef', tinta: '#2c2c2a', apagado: '#5f5e5a', linea: 'rgba(0,0,0,.08)', pildora: 'rgba(255,255,255,.88)', losa: '#e3ded2', muro: '#d6d0c2', cafe: '#efe3cc', cielo: '#e6f1fb', suelo: '#d9d2c1', mesa: '#c9a77f', estante: '#b4b2a9', baldas: '#888780', sotano: '#e9e4d8', ventana: '#cfe3f6', sol: '#FAC775', nube: '#ffffff', edificio: '#d6d0c2', forjado: '#b4b2a9', puerta: '#5f5e5a', ranura: '#888780', cabina: '#d3d1c7', hueco: '#444441', papel: '#F1EFE8', timbre: '#b4b2a9' }
+    const OSCURO = { oscuro: true, fondo: '#1b1b1a', tinta: '#f1efe8', apagado: '#b4b2a9', linea: 'rgba(255,255,255,.10)', pildora: 'rgba(30,30,28,.85)', losa: '#3a3936', muro: '#4a4945', cafe: '#3d3428', cielo: '#16202f', suelo: '#2a2a27', mesa: '#6b5a48', estante: '#5f5e5a', baldas: '#444441', sotano: '#262624', ventana: '#24324a', sol: '#e6f1fb', nube: '#2a3445', edificio: '#3a3936', forjado: '#5f5e5a', puerta: '#2c2c2a', ranura: '#444441', cabina: '#5f5e5a', hueco: '#2c2c2a', papel: '#F1EFE8', timbre: '#5f5e5a' }
+    const tema = matchMedia('(prefers-color-scheme: dark)')
+    let PAL = tema.matches ? OSCURO : CLARO
+    const alCambiarTema = () => { PAL = tema.matches ? OSCURO : CLARO }
+    if (tema.addEventListener) tema.addEventListener('change', alCambiarTema)
+    else if (tema.addListener) tema.addListener(alCambiarTema)
+
+    // --- primitivas de dibujo (coordenadas lógicas: W de ancho)
+    const rgb = h => { if (h[0] !== '#') return h.match(/\d+/g).slice(0, 3).map(Number); const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255] }
+    const tono = (h, a) => { const c = rgb(h), t = a < 0 ? 0 : 255, p = Math.abs(a); return `rgb(${c.map(v => Math.round(v + (t - v) * p)).join(',')})` }
+    const tinte = col => PAL.oscuro ? tono(col, -0.7) : tono(col, 0.85)
+    const rotulo = col => PAL.oscuro ? tono(col, 0.5) : tono(col, -0.45)
+    function poly(pts, f) { ctx.beginPath(); pts.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.closePath(); ctx.fillStyle = f; ctx.fill() }
+    function circ(x, y, r, f, a) { ctx.globalAlpha = a == null ? 1 : a; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fillStyle = f; ctx.fill(); ctx.globalAlpha = 1 }
+    function ell(x, y, rx, ry, f, a) { ctx.globalAlpha = a == null ? 1 : a; ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0, 7); ctx.fillStyle = f; ctx.fill(); ctx.globalAlpha = 1 }
+    function rr(x, y, w, h, r, f) { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h); ctx.fillStyle = f; ctx.fill() }
+    function rect(x, y, w, h, f, a) { ctx.globalAlpha = a == null ? 1 : a; ctx.fillStyle = f; ctx.fillRect(x, y, w, h); ctx.globalAlpha = 1 }
+    function txt(x, y, s, c, size, al, negrita) { ctx.font = (negrita ? '600 ' : '') + size + 'px ' + FUENTE; ctx.fillStyle = c; ctx.textAlign = al || 'left'; ctx.fillText(s, x, y) }
+    function pildora(x, y, s, c, size) {
+      ctx.font = size + 'px ' + FUENTE
+      const w = ctx.measureText(s).width + size * 0.9, h = size * 1.35
+      rr(x - w / 2, y - h * 0.75, w, h, h / 2, PAL.pildora)
+      txt(x, y, s, c, size, 'center')
+    }
+    function rotuloSala(x, y, s, c, size) {
+      ctx.font = '600 ' + size + 'px ' + FUENTE
+      const w = ctx.measureText(s).width + size * 0.9, h = size * 1.45
+      rr(x, y - h * 0.74, w, h, h / 2, PAL.pildora)
+      txt(x + size * 0.45, y, s, c, size, 'left', 1)
+    }
+    const azar = (a, b) => a + Math.random() * (b - a)
+
+    // --- los personajes
+    let T = 0
+    const chars = new Map()
+    let lista = []
+    let porSala = new Map()
+    let salas = []
+    let hover = null
+
+    /** Un personaje dibujado: la maqueta, más el resalte al pasar el ratón. */
+    function figura(x, y, c, s) {
+      const e = c.d.estado, andando = c.moving, b = andando ? Math.abs(Math.sin(T * 12 + c.ph)) * 1.6 * s : 0, col = c.d.color
+      if (hover === c) { ctx.strokeStyle = PAL.tinta; ctx.globalAlpha = 0.5; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(x, y, 9 * s, 3.6 * s, 0, 0, 7); ctx.stroke(); ctx.globalAlpha = 1 }
+      ell(x, y, 6.5 * s, 2.6 * s, '#000', 0.16)
+      if (e === 'i' && !andando) {
+        rr(x - 4 * s, y - 9 * s, 8 * s, 7 * s, 3 * s, col)
+        circ(x + c.face * 4 * s, y - 6 * s, 3.4 * s, '#F2C6A0')
+        c.sx = x; c.sy = y - 6 * s
+        return
+      }
+      rr(x - 4 * s, y - 15 * s - b, 8 * s, 12 * s, 3.5 * s, col)
+      if (e === 'a') rect(x + 3 * s, y - 22 * s - b, 2 * s, 8 * s, col)
+      else if (e === 'w' && !andando && !c.task) rect(x + c.face * 3 * s - s, y - 10 * s + (Math.sin(T * 14 + c.ph) > 0 ? s : 0), 2.5 * s, 2 * s, tono(col, -0.25))
+      if (c.carry) rect(x + 4 * s, y - 12 * s - b, 4 * s, 4 * s, PAL.papel)
+      circ(x, y - 18.5 * s - b, 4 * s, '#F2C6A0')
+      c.sx = x; c.sy = y - 10 * s
+    }
+    function icono(c, x, y, s) {
+      const e = c.d.estado
+      if (e === 'a') { circ(x, y, 7 * s, '#EF9F27', 0.6 + 0.4 * Math.sin(T * 6)); txt(x, y + 3.5 * s, '!', '#412402', 11 * s, 'center', 1) }
+      else if (c.moving) return
+      else if (e === 'i') { const k = (T * 0.6 + c.ph) % 1; ctx.globalAlpha = 1 - k; txt(x + (5 + k * 4) * s, y + 8 * s - k * 8 * s, 'z', PAL.apagado, 11 * s, 'left', 1); ctx.globalAlpha = 1 }
+      else if (e === 'w' && !c.task) txt(x, y + 2 * s, '•'.repeat(Math.floor(T * 2.5 + c.ph) % 4), '#1D9E75', 8 * s, 'center')
+      else if (e === 'p') txt(x + 4 * s, y + 2 * s, '~', PAL.apagado, 11 * s, 'left')
+    }
+    function etiqueta(c, x, y, s) { if (etiquetas) pildora(x, y, c.d.id, PAL.tinta, 9 * s) }
+    const duenos = clave => { const o = []; for (const c of porSala.get(clave) || []) o[c.slot] = c; return o }
+    const mesas = clave => Math.max(2, (porSala.get(clave) || []).length)
+    /** El orden de llegada a la cola de espera de su sala: el primero, justo en la puerta (o en el ascensor). */
+    const turnoEspera = c => Math.max(0, (porSala.get(c.d.sala) || []).filter(x => x.d.estado === 'a').sort((a, b) => a.slot - b.slot).indexOf(c))
+    const textoSala = s => s.tipo === 'proyecto' ? `${s.nombre}  ${s.texto}` : `${s.nombre} · ${s.texto}`
+    const textoCorto = s => s.tipo === 'proyecto' ? `${s.nombre}  ${s.texto}` : s.nombre
+
+    // =============================================================== Isométrica
+    const ISO = {
+      nombre: 'Isométrica',
+      desc: 'Planta abierta en 2,5D: cada proyecto en seguimiento es una sala. Un subagente que cambia de actividad va a la estantería y vuelve; quien te espera sale al pasillo; en pausa, a la cafetería.',
+      velocidad: 2.2,
+      ANCHO: 6.4, CALLE: 1.1, PASILLO: 1.3,
+      profundidad: n => 3.6 + (Math.ceil(n / 3) - 1) * 1.7,
+      P(x, y, z) { return [this.OX + (x - y) * this.TW / 2, this.OY + (x + y) * this.TH / 2 - (z || 0)] },
+      caja(x, y, z, w, d, h, col) {
+        const a = this.P(x, y, z + h), b = this.P(x + w, y, z + h), c = this.P(x + w, y + d, z + h), e = this.P(x, y + d, z + h)
+        const b0 = this.P(x + w, y, z), c0 = this.P(x + w, y + d, z), e0 = this.P(x, y + d, z)
+        poly([e, c, c0, e0], tono(col, -0.14)); poly([b, c, c0, b0], tono(col, -0.3)); poly([a, b, c, e], col)
+        return { e, c, c0, e0 }
+      },
+      maquetar(salas) {
+        // Rejilla de 2 columnas; la cafetería ocupa la celda que sobra o, si no sobra, una fila entera.
+        const celdas = salas.map(s => ({ s, n: mesas(s.clave) }))
+        const filas = []
+        for (let i = 0; i < celdas.length; i += 2) filas.push(celdas.slice(i, i + 2))
+        if (celdas.length % 2 === 1) filas[filas.length - 1].push({ cafe: true })
+        else filas.push([{ cafe: true, ancha: true }])
+        this.salas = new Map()
+        let y = 0
+        for (const fila of filas) {
+          const d = Math.max(...fila.map(c => c.cafe ? 3.6 : this.profundidad(c.n)))
+          fila.forEach((c, col) => {
+            const r = { x: col * (this.ANCHO + this.CALLE), y, w: c.ancha ? 2 * this.ANCHO + this.CALLE : this.ANCHO, d, s: c.s, n: c.n, ancha: !!c.ancha }
+            if (c.cafe) this.cafe = r; else this.salas.set(c.s.clave, r)
+          })
+          y += d + this.PASILLO
+        }
+        this.X = 2 * this.ANCHO + this.CALLE
+        this.Y = y
+        const m = 16, ext = this.X + this.Y + 1.2
+        this.TW = Math.min(64, 2 * (W - 2 * m) / ext)
+        this.TH = this.TW / 2
+        this.k = this.TW / 56
+        this.OX = (W - ext * this.TW / 2) / 2 + (this.Y + 0.6) * this.TW / 2
+        this.OY = m + 0.6 * this.TH + 38 * this.k
+        return Math.ceil(this.OY + (this.X + this.Y) * this.TH / 2 + 30 * this.k + m)
+      },
+      mesa(r, i) { return { x: r.x + 1 + (i % 3) * 1.75, y: r.y + 1.3 + Math.floor(i / 3) * 1.7 } },
+      puertas(r) {
+        const x = r.x + r.w / 2
+        // La cafetería ancha (sola en su fila) se abre al pasillo de detrás; las salas, al de delante.
+        if (r.ancha) return { dentro: { x, y: r.y + 0.6 }, fuera: { x, y: r.y - this.PASILLO / 2 } }
+        return { dentro: { x, y: r.y + r.d - 0.5 }, fuera: { x, y: r.y + r.d + this.PASILLO / 2 } }
+      },
+      zona(p) {
+        for (const r of [...this.salas.values(), this.cafe]) if (p.x >= r.x - 0.01 && p.x <= r.x + r.w + 0.01 && p.y >= r.y - 0.01 && p.y <= r.y + r.d + 0.01) return r
+        return null
+      },
+      sala(c) { return this.salas.get(c.d.sala) || this.cafe },
+      puesto(c) { const m = this.mesa(this.sala(c), c.slot); return { x: m.x + 0.35, y: m.y + 0.95 } },
+      espera(c) { const f = this.puertas(this.sala(c)).fuera, k = turnoEspera(c) % 5; return { x: f.x + [0, 0.6, -0.6, 1.2, -1.2][k], y: f.y } },
+      recurso(c) { const r = this.sala(c); return { x: r.x + r.w - 0.75, y: r.y + 0.9 } },
+      paseo() { const f = this.cafe; return { x: azar(f.x + 0.5, f.x + f.w - 0.5), y: azar(f.y + 0.9, f.y + f.d - 1.3) } },
+      entrada(c) { return { ...this.puertas(this.sala(c)).fuera } },
+      cara(dx, dy) { return dx - dy },
+      ruta(c, dest) {
+        // Por los pasillos: se sale por la puerta, se cambia de fila por la calle central y se entra por la otra puerta.
+        const a = c.pos, ra = this.zona(a), rb = this.zona(dest)
+        if (ra && ra === rb) return [dest]
+        const camino = []
+        let y = a.y
+        if (ra) { const p = this.puertas(ra); camino.push(p.dentro, p.fuera); y = p.fuera.y }
+        const pb = rb ? this.puertas(rb).fuera : dest
+        if (Math.abs(pb.y - y) > 0.05) { const cx = this.ANCHO + this.CALLE / 2; camino.push({ x: cx, y }, { x: cx, y: pb.y }) }
+        camino.push(pb)
+        if (rb) camino.push(this.puertas(rb).dentro, dest)
+        return camino
+      },
+      dibujar(alto) {
+        const k = this.k
+        rect(0, 0, W, alto, PAL.fondo)
+        this.caja(-0.6, -0.6, -14 * k, this.X + 0.6, this.Y + 0.6, 14 * k, PAL.losa)
+        const celdas = [...this.salas.values()].sort((a, b) => a.x + a.y - (b.x + b.y))
+        const suelo = (r, col) => poly([this.P(r.x, r.y, 1), this.P(r.x + r.w, r.y, 1), this.P(r.x + r.w, r.y + r.d, 1), this.P(r.x, r.y + r.d, 1)], col)
+        for (const r of celdas) {
+          suelo(r, tinte(r.s.color))
+          this.caja(r.x, r.y - 0.12, 0, r.w, 0.12, 26 * k, PAL.muro)
+          this.caja(r.x - 0.12, r.y, 0, 0.12, r.d, 26 * k, PAL.muro)
+        }
+        const f = this.cafe
+        suelo(f, PAL.cafe)
+        // Un felpudo en cada puerta: delante en las salas; detrás en la cafetería ancha.
+        for (const r of [...celdas, f]) {
+          const x = r.x + r.w / 2, y = r.ancha ? r.y : r.y + r.d
+          poly([this.P(x - 0.45, y - 0.28, 1.5), this.P(x + 0.45, y - 0.28, 1.5), this.P(x + 0.45, y + 0.02, 1.5), this.P(x - 0.45, y + 0.02, 1.5)], tono(r.s ? tinte(r.s.color) : PAL.cafe, -0.22))
+        }
+        const items = []
+        for (const r of celdas) {
+          const s = r.s
+          const ds = duenos(s.clave)
+          for (let i = 0; i < r.n; i++) {
+            const m = this.mesa(r, i)
+            items.push({ k: m.x + m.y + 0.2, f: () => {
+              this.caja(m.x - 0.55, m.y - 0.32, 0, 1.1, 0.62, 13 * k, PAL.mesa)
+              const mon = this.caja(m.x - 0.25, m.y - 0.24, 13 * k, 0.5, 0.07, 11 * k, '#2c2c2a')
+              const o = ds[i]
+              if (o && o.d.estado === 'w') { ctx.globalAlpha = 0.55 + 0.45 * Math.sin(T * 4 + o.ph); poly([mon.e, mon.c, mon.c0, mon.e0], o.d.color); ctx.globalAlpha = 1 }
+              else if (o && o.d.estado === 'a') { ctx.globalAlpha = 0.5 + 0.5 * Math.sin(T * 6); poly([mon.e, mon.c, mon.c0, mon.e0], '#EF9F27'); ctx.globalAlpha = 1 }
+            } })
+          }
+          const q = { x: r.x + r.w - 0.75, y: r.y + 0.9 }
+          items.push({ k: q.x + q.y - 0.4, f: () => {
+            this.caja(q.x - 0.2, q.y - 0.75, 0, 0.45, 0.3, 30 * k, PAL.estante)
+            ctx.strokeStyle = PAL.baldas; ctx.lineWidth = 1
+            for (let j = 1; j < 4; j++) { const a = this.P(q.x - 0.2, q.y - 0.45, j * 7.5 * k), b = this.P(q.x + 0.25, q.y - 0.45, j * 7.5 * k); ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke() }
+          } })
+          items.push({ k: r.x + r.y + 0.9, f: () => { this.caja(r.x + 0.25, r.y + 0.2, 0, 0.35, 0.35, 7 * k, '#993C1D'); const p = this.P(r.x + 0.42, r.y + 0.37, 15 * k); circ(p[0], p[1], 8 * k, '#639922'); circ(p[0] + 3 * k, p[1] - 4 * k, 5 * k, '#97C459') } })
+        }
+        // Cafetera y sofá delante, lejos del pasillo de atrás, para que nadie que espera parezca estar tomando café.
+        const fy = f.y + f.d - 0.75
+        items.push({ k: f.x + fy + 0.6, f: () => {
+          this.caja(f.x + 0.15, fy, 0, 0.6, 0.45, 22 * k, '#444441')
+          const p = this.P(f.x + 0.45, fy + 0.45, 14 * k); circ(p[0], p[1], 2 * k, Math.sin(T * 3) > 0 ? '#E24B4A' : '#712B13')
+        } })
+        items.push({ k: f.x + 1.8 + fy + 0.5, f: () => { this.caja(f.x + 1.2, fy + 0.1, 0, 1.2, 0.5, 9 * k, '#7F77DD'); this.caja(f.x + 1.2, fy + 0.45, 9 * k, 1.2, 0.15, 8 * k, '#534AB7') } })
+        items.push({ k: f.x + f.y + f.w + f.d, f: () => { const p = this.P(f.x + f.w - 0.4, f.y + 0.4, 0); pildora(p[0], p[1] - 30 * k, 'cafetería', PAL.apagado, 9 * k) } })
+        for (const c of lista) items.push({ k: c.pos.x + c.pos.y + 0.3, f: () => { const p = this.P(c.pos.x, c.pos.y, 1); figura(p[0], p[1], c, k); c.lx = p[0]; c.ly = p[1] } })
+        items.sort((a, b) => a.k - b.k).forEach(i => i.f())
+        for (const r of celdas) { const p = this.P(r.x + 0.15, r.y + 0.1, 30 * k); rotuloSala(p[0], p[1] - 2 * k, textoCorto(r.s), rotulo(r.s.color), 11 * k) }
+        for (const c of lista) { icono(c, c.lx, c.ly - 34 * k, k); etiqueta(c, c.lx, c.ly + 14 * k, k) }
+      },
+    }
+
+    // ==================================================================== Torre
+    const TORRE = {
+      nombre: 'Torre',
+      desc: 'Edificio en corte: una planta por proyecto en seguimiento, la azotea para descansar y el sótano de archivo. Un subagente que cambia de actividad baja al archivo en ascensor; quien te espera llama al timbre del ascensor de su planta.',
+      velocidad: 70, ascensor: 95,
+      X0: 170, X1: 660, LX: 692, FH: 70, TOP: 44, k: 1.05,
+      alto(n) { return this.TOP + (n + 2) * this.FH + 36 },
+      maquetar(salas) {
+        this.lista = salas
+        this.N = salas.length
+        this.nivel = new Map(salas.map((s, i) => [s.clave, i + 1]))
+        // Hasta 5 proyectos cabe entero; con más, el edificio crece y el lienzo hace scroll.
+        const proyectos = salas.filter(s => s.tipo === 'proyecto').length
+        this.altoMax = proyectos > 5 ? this.alto(this.N - proyectos + 5) : 0
+        return this.alto(this.N)
+      },
+      fy(l) { return this.TOP + l * this.FH + this.FH - 8 },
+      paso(n) { return Math.min(105, 330 / Math.max(1, n - 1)) },
+      xMesa(clave, i) { return this.X0 + 70 + i * this.paso(mesas(clave)) },
+      planta(c) { return this.nivel.get(c.d.sala) || 1 },
+      puesto(c) { const l = this.planta(c); return { x: this.xMesa(c.d.sala, c.slot), y: this.fy(l), l } },
+      espera(c) { const l = this.planta(c); return { x: this.X1 - 24 - (turnoEspera(c) % 6) * 13, y: this.fy(l), l } },
+      estantes() { return Math.floor((this.X1 - this.X0 - 140) / 66) },
+      recurso() { const l = this.N + 1; return { x: this.X0 + 152 + Math.floor(Math.random() * this.estantes()) * 66, y: this.fy(l), l } },
+      paseo() { return { x: azar(this.X0 + 40, this.X0 + 420), y: this.fy(0), l: 0 } },
+      entrada(c) { const l = this.planta(c); return { x: this.LX, y: this.fy(l), l } },
+      cara(dx) { return dx },
+      ruta(c, d) {
+        const l0 = c.pos.l, l1 = d.l
+        if (l0 === l1) return [d]
+        return [{ x: this.LX, y: this.fy(l0), l: l0 }, { x: this.LX, y: this.fy(l1), l: l1, v: this.ascensor }, d]
+      },
+      dibujar(alto) {
+        const { X0, X1, LX, FH, TOP, N, k } = this
+        rect(0, 0, W, alto, PAL.cielo)
+        const gy = TOP + (N + 1) * FH
+        rect(0, gy, W, alto - gy, PAL.suelo)
+        circ(90, 60, 18, PAL.sol, 0.9)
+        for (let j = 0; j < 3; j++) ell(((j * 290 + T * 10) % (W + 160)) - 80, 90 + j * 30, 40, 8, PAL.nube, 0.8)
+        rect(X0 - 14, TOP + FH - 10, X1 - X0 + 70, (N + 1) * FH + 12, PAL.edificio)
+        const esperan = new Set(lista.filter(c => c.d.estado === 'a' && !c.moving && c.path.length === 0).map(c => c.pos.l))
+        for (let l = 0; l <= N + 1; l++) {
+          const y0 = TOP + l * FH, fy = this.fy(l), s = l >= 1 && l <= N ? this.lista[l - 1] : null
+          if (s) rect(X0, y0 + 4, X1 - X0, FH - 12, tinte(s.color))
+          else if (l === N + 1) rect(X0, y0 + 4, X1 - X0, FH - 12, PAL.sotano)
+          rect(X0 - 8, fy, X1 - X0 + 60, 4, PAL.forjado)
+          if (s) {
+            rect(X0 - 10, y0 + 14, 8, FH - 30, PAL.ventana)
+            txt(X0 + 10, y0 + 20, textoSala(s), rotulo(s.color), 11, 'left', 1)
+            if (s.pct !== null) { rect(X0 + 10, y0 + 25, 90, 3, PAL.linea); rect(X0 + 10, y0 + 25, 90 * s.pct / 100, 3, s.color) }
+            const n = mesas(s.clave), sp = this.paso(n), dw = Math.min(38, sp - 10), ds = duenos(s.clave)
+            for (let i = 0; i < n; i++) {
+              const x = X0 + 70 + i * sp, mw = Math.min(18, dw * 0.5), mx = x + 6 + dw * 0.3
+              rect(x + 6, fy - 20, dw, 3, PAL.mesa); rect(x + 8, fy - 17, 2, 17, PAL.mesa); rect(x + 4 + dw, fy - 17, 2, 17, PAL.mesa)
+              rect(mx, fy - 36, mw, 14, '#2c2c2a')
+              const o = ds[i]
+              if (o && o.d.estado === 'w') rect(mx + 2, fy - 34, mw - 4, 10, o.d.color, 0.6 + 0.4 * Math.sin(T * 4 + o.ph))
+              else if (o && o.d.estado === 'a') rect(mx + 2, fy - 34, mw - 4, 10, '#EF9F27', 0.5 + 0.5 * Math.sin(T * 6))
+            }
+          }
+          if (l === 0) {
+            rect(X0 + 260, fy - 40, 2, 40, '#888780')
+            ctx.beginPath(); ctx.moveTo(X0 + 232, fy - 34); ctx.lineTo(X0 + 261, fy - 50); ctx.lineTo(X0 + 290, fy - 34); ctx.closePath(); ctx.fillStyle = '#EF9F27'; ctx.fill()
+            for (let p = 0; p < 4; p++) { rect(X0 + 30 + p * 110, fy - 10, 12, 10, '#993C1D'); circ(X0 + 36 + p * 110, fy - 16, 8, '#639922') }
+            txt(X0 + 10, fy - 50, 'azotea · descanso', PAL.apagado, 10)
+          }
+          if (l === N + 1) {
+            for (let e = 0; e < this.estantes(); e++) {
+              rect(X0 + 130 + e * 66, fy - 48, 44, 48, PAL.estante)
+              for (let r = 0; r < 3; r++) rect(X0 + 134 + e * 66, fy - 44 + r * 15, 36, 9, ['#7F77DD', '#D85A30', '#1D9E75', '#EF9F27'][(e + r) % 4])
+            }
+            txt(X0 + 10, y0 + 18, 'sótano · archivo', PAL.apagado, 10)
+          }
+          rect(LX - 14, fy - 44, 28, 44, PAL.puerta); rect(LX - 1, fy - 44, 2, 44, PAL.ranura)
+          if (s) circ(LX - 22, fy - 26, 3.5, esperan.has(l) ? '#EF9F27' : PAL.timbre, esperan.has(l) ? 0.6 + 0.4 * Math.sin(T * 8) : 1)
+        }
+        rect(LX - 16, TOP + FH - 10, 2, (N + 1) * FH + 6, PAL.hueco); rect(LX + 14, TOP + FH - 10, 2, (N + 1) * FH + 6, PAL.hueco)
+        for (const c of lista) {
+          const t = c.path[0]
+          if (c.moving && t && t.x === LX && Math.abs(c.pos.x - LX) < 1 && Math.abs(t.y - c.pos.y) > 1) { rect(LX - 14, c.pos.y - 44, 28, 46, PAL.cabina); ctx.strokeStyle = PAL.apagado; ctx.lineWidth = 1; ctx.strokeRect(LX - 14, c.pos.y - 44, 28, 46) }
+        }
+        ;[...lista].sort((a, b) => a.pos.y - b.pos.y).forEach(c => { figura(c.pos.x, c.pos.y, c, k); c.lx = c.pos.x; c.ly = c.pos.y })
+        for (const c of lista) { icono(c, c.lx, c.ly - 36, k); etiqueta(c, c.lx, c.ly + 14, k) }
+      },
+    }
+
+    const ESCENAS = { iso: ISO, torre: TORRE }
+    const S = () => ESCENAS[escena] || ISO
+
+    // --- movimiento: rutas, viajes al recurso y paseos (solo en pausa)
+    function destino(c) { const e = c.d.estado; return e === 'a' ? S().espera(c) : e === 'p' ? S().paseo(c) : S().puesto(c) }
+    function colocar(c) { const d = destino(c); c.pos = { x: d.x, y: d.y, l: d.l }; c.path = []; c.task = null; c.carry = false; c.t = azar(0, 3) }
+    function haciaEstado(c) { c.task = null; c.carry = false; c.path = S().ruta(c, destino(c)); c.t = azar(1, 3) }
+    function viaje(c) { c.task = 'ida'; c.carry = false; c.path = S().ruta(c, S().recurso(c)) }
+    function mover(c, dt) {
+      const sc = S()
+      c.moving = false
+      if (c.path.length) {
+        const t = c.path[0], dx = t.x - c.pos.x, dy = t.y - c.pos.y, d = Math.hypot(dx, dy)
+        const paso = (t.v || sc.velocidad) * (c.d.estado === 'p' ? 0.7 : 1) * dt
+        if (d <= paso || d < 1e-3) { c.pos.x = t.x; c.pos.y = t.y; if (t.l != null) c.pos.l = t.l; c.path.shift() }
+        else { c.pos.x += dx / d * paso; c.pos.y += dy / d * paso; c.moving = true; const f = sc.cara(dx, dy); if (Math.abs(f) > 1e-3) c.face = f > 0 ? 1 : -1 }
+        return
+      }
+      if (c.task === 'ida') { c.task = 'recoge'; c.t = 0.9; return }
+      if (c.task === 'recoge') { c.t -= dt; if (c.t <= 0) { c.task = 'vuelta'; c.carry = true; c.path = sc.ruta(c, sc.puesto(c)) } return }
+      if (c.task === 'vuelta') { c.task = null; c.carry = false; return }
+      if (c.d.estado === 'p') { c.t -= dt; if (c.t <= 0) { c.path = sc.ruta(c, sc.paseo(c)); c.t = azar(1.5, 4.5) } }
+    }
+
+    // --- sincronizar con datos.js: altas, bajas, puestos, cambios de estado y de actividad
+    let datos = null, clave = '', alto = 480, firma = ''
+    function asignarPuestos() {
+      porSala = new Map()
+      for (const c of lista) { if (!porSala.has(c.d.sala)) porSala.set(c.d.sala, []); porSala.get(c.d.sala).push(c) }
+      for (const [sala, cs] of porSala) {
+        const n = Math.max(2, cs.length), usados = new Set(), sin = []
+        for (const c of cs) { if (c.sala === sala && c.slot != null && c.slot < n && !usados.has(c.slot)) usados.add(c.slot); else sin.push(c) }
+        let k = 0
+        for (const c of sin) { while (usados.has(k)) k++; c.movido = c.slot != null; c.slot = k; c.sala = sala; usados.add(k) }
+      }
+    }
+    function sincronizar(H, forzar) {
+      datos = H.escenas
+      const reinicio = forzar || clave !== escena + '|' + modo
+      clave = escena + '|' + modo
+      if (reinicio) chars.clear()
+      const antes = new Map()
+      const vistos = new Set()
+      for (const p of datos[modo] || []) {
+        vistos.add(p.clave)
+        let c = chars.get(p.clave)
+        if (!c) { c = { clave: p.clave, slot: null, sala: null, pos: { x: 0, y: 0, l: 0 }, path: [], moving: false, face: 1, ph: Math.random() * 6, t: 0, task: null, carry: false, nuevo: !reinicio }; chars.set(p.clave, c) }
+        else antes.set(p.clave, c.d)
+        c.d = p
+      }
+      for (const k of [...chars.keys()]) if (!vistos.has(k)) chars.delete(k)
+      lista = [...chars.values()]
+      if (hover && !chars.has(hover.clave)) hover = null
+      asignarPuestos()
+      salas = datos.salas || []
+      const nuevoAlto = S().maquetar(salas)
+      const nuevaFirma = clave + '|' + salas.map(s => s.clave + ':' + mesas(s.clave)).join(',')
+      const recolocar = !reinicio && nuevaFirma !== firma
+      firma = nuevaFirma
+      if (nuevoAlto !== alto || reinicio) { alto = nuevoAlto; redimensionar() }
+      for (const c of lista) {
+        const a = antes.get(c.clave)
+        if (reinicio) colocar(c)
+        else if (c.nuevo) {
+          // Un subagente nuevo sale de donde está su sesión; el resto entra por la puerta o el ascensor.
+          c.nuevo = false
+          const lider = c.d.sub ? lista.find(x => x.clave === c.d.lider && x !== c) : null
+          const p = lider ? lider.pos : S().entrada(c)
+          c.pos = { x: p.x, y: p.y, l: p.l }
+          haciaEstado(c)
+        }
+        else if (a && (a.estado !== c.d.estado || a.sala !== c.d.sala)) haciaEstado(c)
+        else if (a && c.d.sub && c.d.estado === 'w' && a.estado === 'w' && a.actividad !== c.d.actividad) { if (!c.task) viaje(c) }
+        else if ((recolocar || c.movido) && !c.task && c.d.estado !== 'p') haciaEstado(c)
+        c.movido = false
+      }
+      $('escena-vacia').hidden = lista.length > 0
+      if (hover) mostrarTip(hover)
+    }
+
+    // --- lienzo: tamaño, nitidez (devicePixelRatio) y bucle de animación
+    let escala = 1, dpr = 1
+    function redimensionar() {
+      const ancho = lienzo.clientWidth
+      if (!ancho) return
+      dpr = Math.min(3, window.devicePixelRatio || 1)
+      escala = ancho / W
+      cv.style.height = Math.round(alto * escala) + 'px'
+      cv.width = Math.round(ancho * dpr)
+      cv.height = Math.round(alto * escala * dpr)
+      const max = S().altoMax
+      lienzo.style.maxHeight = max ? Math.round(max * escala) + 'px' : ''
+    }
+    if (window.ResizeObserver) new ResizeObserver(redimensionar).observe(lienzo)
+    else window.addEventListener('resize', redimensionar)
+
+    let activo = false, raf = 0, ultimo = 0, fotogramas = 0, msDibujo = 0
+    function fotograma(ahora) {
+      if (!activo) { raf = 0; return }
+      // El siguiente se pide antes de dibujar: un fallo en un fotograma no para la animación.
+      raf = requestAnimationFrame(fotograma)
+      const dt = Math.max(0, Math.min(0.05, (ahora - ultimo) / 1000))
+      ultimo = ahora
+      T += dt
+      fotogramas++
+      // Hasta que llega el primer datos.js (o tras cambiar de escena sin datos) no hay nada maquetado.
+      if (!datos || clave !== escena + '|' + modo || cv.width === 0) return
+      const t0 = performance.now()
+      for (const c of lista) mover(c, dt)
+      ctx.setTransform(escala * dpr, 0, 0, escala * dpr, 0, 0)
+      S().dibujar(alto)
+      msDibujo = msDibujo * 0.95 + (performance.now() - t0) * 0.05
+    }
+    /** Solo se anima con la Oficina a la vista, en una escena de lienzo y con la pestaña visible. */
+    function actualizarActivo() {
+      const debe = vista === 'oficina' && escena !== 'clasica' && document.visibilityState === 'visible'
+      if (debe && !activo) { activo = true; ultimo = performance.now(); redimensionar(); raf = requestAnimationFrame(fotograma) }
+      else if (!debe && activo) { activo = false; if (raf) cancelAnimationFrame(raf); raf = 0; tip.hidden = true }
+    }
+    document.addEventListener('visibilitychange', actualizarActivo)
+
+    // --- ratón: tooltip, resalte y clic para abrir el detalle
+    let raton = null
+    function enLienzo(e) { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * alto } }
+    function cercano(m) {
+      let mejor = null, bd = 18 * Math.max(0.8, S().k || 1)
+      for (const c of lista) { const d = Math.hypot(c.sx - m.x, c.sy - m.y); if (d < bd) { bd = d; mejor = c } }
+      return mejor
+    }
+    function mostrarTip(c) {
+      if (!c || !raton) { tip.hidden = true; return }
+      const r = caja.getBoundingClientRect(), d = c.d
+      tip.innerHTML = `<b>${esc(d.id)}</b><br><span class="mut">${esc(d.proyecto)} · ${esc(d.rol)}</span><br><span style="color:${COLOR[d.estado]}">●</span> ${NOMBRE_ESTADO[d.estado]}<br><span class="mut">${esc(d.actividad)}</span>`
+      tip.hidden = false
+      tip.style.left = Math.max(0, Math.min(r.width - tip.offsetWidth - 4, raton.clientX - r.left + 12)) + 'px'
+      tip.style.top = (raton.clientY - r.top + 14) + 'px'
+    }
+    cv.addEventListener('mousemove', e => { raton = e; hover = cercano(enLienzo(e)); cv.style.cursor = hover ? 'pointer' : ''; mostrarTip(hover) })
+    cv.addEventListener('mouseleave', () => { raton = null; hover = null; tip.hidden = true })
+    cv.addEventListener('click', e => { const c = cercano(enLienzo(e)); if (c) abrirDetalle(c.clave) })
+
+    const api = { sincronizar, actualizarActivo, redimensionar, nombre: k => (ESCENAS[k] || {}).nombre, desc: k => (ESCENAS[k] || {}).desc || '' }
+    if (depurar) {
+      window.huddleEscenas = {
+        personajes: () => lista.map(c => ({ clave: c.clave, id: c.d.id, estado: c.d.estado, sala: c.d.sala, sub: c.d.sub, x: c.pos.x, y: c.pos.y, l: c.pos.l, sx: c.sx, sy: c.sy, andando: c.moving || c.path.length > 0, tarea: c.task, zona: escena === 'iso' && ISO.zona ? (z => z === ISO.cafe ? 'cafetería' : z ? z.s.clave : 'pasillo')(ISO.zona(c.pos)) : c.pos.l === 0 ? 'azotea' : c.pos.l === TORRE.N + 1 ? 'sótano' : 'planta ' + c.pos.l })),
+        fotogramas: () => fotogramas,
+        msDibujo: () => msDibujo,
+        activo: () => activo,
+        alto: () => alto,
+      }
+    }
+    return api
+  })()
+
   // --- cada bloque se pinta por separado; solo se repintan los que cambian
   const bloques = {
     cabecera: H => { $('cabecera').textContent = H.cabecera },
@@ -206,7 +749,7 @@ button:hover{background:var(--surface-1)}
     arbol: H => {
       $('arbol').innerHTML = H.arbol.length === 0
         ? '<div class="vacio">ninguna sesión abierta</div>'
-        : H.arbol.map(r => `<div class="fila ${r.sub ? 'a' : 's'}"><span>${r.sub ? '<span class="mut">└ </span>' : `<span style="color:${r.color}">●</span> `}<span${r.sub ? ` style="color:${r.color}"` : ''}>${esc(r.nombre)}</span> <span class="mut" style="font-size:11px">${esc(r.tipo)}</span></span><span class="mut" style="font-size:11px">${esc(r.detalle)} ${icono(r.estado)}</span></div>`).join('')
+        : H.arbol.map(r => `<div class="fila ${r.sub ? 'a' : 's'}" data-clave="${esc(r.clave)}" role="button" tabindex="0" title="Ver el detalle"><span>${r.sub ? '<span class="mut">└ </span>' : `<span style="color:${r.color}">●</span> `}<span${r.sub ? ` style="color:${r.color}"` : ''}>${esc(r.nombre)}</span> <span class="mut" style="font-size:11px">${esc(r.tipo)}</span></span><span class="mut" style="font-size:11px">${esc(r.detalle)} ${icono(r.estado)}</span></div>`).join('')
     },
     rex: H => {
       const r = H.rex
@@ -257,6 +800,8 @@ button:hover{background:var(--surface-1)}
         ? '<div class="vacio">La oficina está vacía: no hay ninguna sesión abierta.</div>'
         : salas.map(s => `<div class="room${s.empleados.length > 2 ? ' ancha' : ''}"><div class="fila"><span style="font-weight:500">${esc(s.nombre)}</span><span class="mut" style="font-size:11px">${esc(s.contador)}</span></div><div class="desks">${s.empleados.map(e => `<div class="desk" title="${esc(e.etiqueta)} · ${esc(e.actividad)}">${worker(e.color, e.estado)}<div style="font-size:11px"><span style="color:${COLOR[e.estado]}">●</span> ${esc(e.etiqueta)}</div><div class="mut" style="font-size:11px">${esc(e.actividad)}</div></div>`).join('')}</div></div>`).join('')
     },
+    escenas: H => { Motor.sincronizar(H) },
+    detalles: () => { pintarDetalle() },
     pie: H => { $('pie').textContent = H.pie },
   }
 

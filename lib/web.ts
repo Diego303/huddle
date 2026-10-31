@@ -32,12 +32,19 @@ import { adornoHoy, duracion, fechaCabecera, fichasPanel, proyectosEnSeguimiento
 
 export type EstadoWeb = 'w' | 'a' | 'p' | 'i'
 
-export type FilaArbol = { nombre: string; tipo: string; detalle: string; estado: EstadoWeb; color: string; sub: boolean }
+export type FilaArbol = { clave: string; nombre: string; tipo: string; detalle: string; estado: EstadoWeb; color: string; sub: boolean }
 export type EmpleadoWeb = { etiqueta: string; actividad: string; estado: EstadoWeb; color: string }
 export type SalaWeb = { nombre: string; contador: string; empleados: EmpleadoWeb[] }
 export type BarraWeb = { nombre: string; detalle: string; pct: number | null; texto: string; color: string }
 export type UsoWeb = { titulo: string; pct: number | null; texto: string; pie: string; color: string }
 export type DiaWeb = { letra: string; altoC: number; altoT: number; hoy: boolean; vacio: boolean; titulo: string }
+
+/** Una sala de las escenas Isométrica y Torre: un proyecto en seguimiento, GENERAL u «otros». */
+export type SalaEscena = { clave: string; nombre: string; tipo: 'proyecto' | 'general' | 'otros'; pct: number | null; texto: string; color: string }
+/** Un personaje de las escenas: una sesión o, en modo agentes, también cada subagente. */
+export type PersonajeWeb = { clave: string; id: string; sala: string; proyecto: string; rol: string; estado: EstadoWeb; actividad: string; color: string; sub: boolean; lider: string }
+/** Lo que enseña el detalle al hacer clic en el árbol o en un personaje. */
+export type DetalleWeb = { titulo: string; subtitulo: string; estado: EstadoWeb; estadoTexto: string; filas: [string, string][] }
 
 export type ModeloWeb = {
   version: string
@@ -62,6 +69,8 @@ export type ModeloWeb = {
   siguiente: { titulo: string; acciones: string[] }
   uso: UsoWeb[]
   oficina: { sesiones: SalaWeb[]; agentes: SalaWeb[]; resumen: Record<'sesiones' | 'agentes', { total: string; trabajando: string; esperan: string; inactivas: string }> }
+  escenas: { salas: SalaEscena[]; sesiones: PersonajeWeb[]; agentes: PersonajeWeb[] }
+  detalles: Record<string, DetalleWeb>
   pie: string
 }
 
@@ -100,6 +109,125 @@ function nombreSesion(v: SesionVista): string {
 
 function detalleSesion(v: SesionVista): string {
   return v.estado === 'inactiva' ? `inactiva ${duracion(v.quietaMin)}` : v.s.detalle
+}
+
+// ------------------------------------------------- escenas Isométrica y Torre
+
+/** Claves estables para la página: no cambian aunque cambie la numeración de los IDs. */
+function claveSesion(v: SesionVista): string {
+  return `s${huella(v.s.session_id)}`
+}
+
+function claveAgente(v: SesionVista, a: SesionVista['agentes'][number], i: number): string {
+  return `a${huella(`${v.s.session_id}/${a.tool_use_id ?? a.agent_id ?? i}`)}`
+}
+
+const SALA_GENERAL = 'general'
+const SALA_OTROS = 'otros'
+
+/** La sala de una sesión: su proyecto si está en seguimiento, GENERAL para la torre y si no, «otros». */
+function salaDe(v: SesionVista, seguimiento: readonly string[]): string {
+  if (v.s.tipo === 'torre') return SALA_GENERAL
+  if (v.s.tipo !== 'proyecto') return SALA_OTROS
+  const n = seguimiento.find(p => p.toLowerCase() === v.s.proyecto.toLowerCase())
+  return n === undefined ? SALA_OTROS : `p:${n}`
+}
+
+function proyectoDe(v: SesionVista): string {
+  return v.s.tipo === 'torre' ? 'GENERAL' : v.s.tipo === 'otros' ? `otros · ${v.s.cwd.slice(v.s.cwd.lastIndexOf('/') + 1)}` : v.s.proyecto
+}
+
+function hace(min: number): string {
+  return min < 1 ? 'ahora mismo' : `hace ${duracion(min)}`
+}
+
+function ms(iso: string | null): number | null {
+  const t = iso === null ? NaN : Date.parse(iso)
+  return Number.isFinite(t) ? t : null
+}
+
+function textoEstado(v: SesionVista): string {
+  switch (v.estado) {
+    case 'trabajando':
+      return 'trabajando'
+    case 'te_espera':
+      return v.esperaMin === null ? 'te espera' : `te espera · ${hace(v.esperaMin)}`
+    case 'en_pausa':
+      return 'en pausa'
+    case 'inactiva':
+      return `inactiva · ${duracion(v.quietaMin)}`
+  }
+}
+
+function escenasWeb(vistas: readonly SesionVista[], seguimiento: readonly string[], filas: readonly BarraWeb[], ahora: number) {
+  const usadas = new Set(vistas.map(v => salaDe(v, seguimiento)))
+  const salas: SalaEscena[] = seguimiento.map((nombre, i) => {
+    const f = filas[i]
+    return { clave: `p:${nombre}`, nombre, tipo: 'proyecto', pct: f?.pct ?? null, texto: f?.texto ?? '—', color: PROYECTO[i % PROYECTO.length]! }
+  })
+  salas.push({ clave: SALA_GENERAL, nombre: 'GENERAL', tipo: 'general', pct: null, texto: 'torre de control', color: WEB.inactiva })
+  if (usadas.has(SALA_OTROS)) salas.push({ clave: SALA_OTROS, nombre: 'otros', tipo: 'otros', pct: null, texto: 'fuera de seguimiento', color: WEB.pausa })
+  const colorSala = new Map(salas.map(s => [s.clave, s.color]))
+
+  const sesiones: PersonajeWeb[] = []
+  const agentes: PersonajeWeb[] = []
+  const detalles: Record<string, DetalleWeb> = {}
+  for (const v of vistas) {
+    const sala = salaDe(v, seguimiento)
+    const proyecto = proyectoDe(v)
+    const base = { clave: claveSesion(v), sala, proyecto, rol: 'lead', estado: estadoWeb(v.estado), actividad: detalleSesion(v), sub: false, lider: '' }
+    sesiones.push({ ...base, id: v.etiqueta, color: colorSala.get(sala) ?? WEB.inactiva })
+    agentes.push({ ...base, id: v.leadId, color: COLOR_ROL.lead! })
+    const inicio = ms(v.s.inicio)
+    detalles[base.clave] = {
+      titulo: nombreSesion(v),
+      subtitulo: `sesión · ${v.leadId}`,
+      estado: base.estado,
+      estadoTexto: textoEstado(v),
+      filas: [
+        ['Actividad', detalleSesion(v)],
+        ['Proyecto', proyecto],
+        ['Rama', v.s.rama ?? 'n/d'],
+        ['Contexto', v.s.contexto_pct === null ? 'n/d' : `${v.s.contexto_pct}%`],
+        ['Modelo', v.s.modelo ?? 'n/d'],
+        ['Abierta', inicio === null ? 'n/d' : hace((ahora - inicio) / 60_000)],
+        ['Último evento', hace(v.quietaMin)],
+        ['Subagentes', v.agentes.length === 0 ? 'ninguno' : v.agentes.map(a => a.id).join(', ')],
+        ['Carpeta', v.s.cwd],
+      ],
+    }
+    v.agentes.forEach((a, i) => {
+      const clave = claveAgente(v, a, i)
+      const estado: EstadoWeb = v.estado === 'inactiva' ? 'i' : estadoWeb(a.estado)
+      agentes.push({
+        clave,
+        id: a.id,
+        sala,
+        proyecto,
+        rol: a.tipo,
+        estado,
+        actividad: a.estado === 'trabajando' ? a.detalle || a.descripcion : a.descripcion,
+        color: a.color,
+        sub: true,
+        lider: base.clave,
+      })
+      const desde = ms(a.inicio)
+      detalles[clave] = {
+        titulo: a.id,
+        subtitulo: `${a.tipo} · subagente de ${v.leadId}`,
+        estado,
+        estadoTexto: estado === 'i' ? 'inactiva (su sesión está quieta)' : a.estado === 'trabajando' ? 'trabajando' : a.estado === 'te_espera' ? 'te espera' : 'en pausa',
+        filas: [
+          ['Tarea', a.descripcion],
+          ['Actividad', a.detalle],
+          ['Sesión', nombreSesion(v)],
+          ['Proyecto', proyecto],
+          ['En marcha', desde === null ? 'n/d' : hace((ahora - desde) / 60_000)],
+        ],
+      }
+    })
+  }
+  return { escenas: { salas, sesiones, agentes }, detalles }
 }
 
 function salasWeb(vistas: readonly SesionVista[], modo: 'sesiones' | 'agentes'): SalaWeb[] {
@@ -161,9 +289,10 @@ export function modeloWeb(d: DatosPanel, ahora: number, generado: string): Model
 
   const arbol: FilaArbol[] = []
   for (const v of vistas) {
-    arbol.push({ nombre: nombreSesion(v), tipo: 'sesión', detalle: detalleSesion(v), estado: estadoWeb(v.estado), color: colorEstado(v.estado), sub: false })
-    for (const a of v.agentes) {
+    arbol.push({ clave: claveSesion(v), nombre: nombreSesion(v), tipo: 'sesión', detalle: detalleSesion(v), estado: estadoWeb(v.estado), color: colorEstado(v.estado), sub: false })
+    for (const [i, a] of v.agentes.entries()) {
       arbol.push({
+        clave: claveAgente(v, a, i),
         nombre: a.id,
         tipo: a.tipo,
         detalle: a.estado === 'trabajando' ? a.descripcion : `${a.descripcion} · ${a.detalle}`,
@@ -220,6 +349,7 @@ export function modeloWeb(d: DatosPanel, ahora: number, generado: string): Model
   const reinicioEstimado = e && e.reinicioSemana !== null ? reinicio(new Date(e.reinicioSemana).toISOString(), ahora, d.desfase) : 'reinicio n/d'
   const sesiones = salasWeb(vistas, 'sesiones')
   const agentes = salasWeb(vistas, 'agentes')
+  const { escenas, detalles } = escenasWeb(vistas, enSeguimiento.map(p => p.nombre), proyectos, ahora)
 
   const sinVersion: Omit<ModeloWeb, 'version'> = {
     generado,
@@ -268,6 +398,8 @@ export function modeloWeb(d: DatosPanel, ahora: number, generado: string): Model
       usoWeb('Uso semanal', WEB.morado, u?.semana, u === null && e ? e.semana : null, reinicioEstimado, ahora, d.desfase),
     ],
     oficina: { sesiones, agentes, resumen: { sesiones: resumenSalas(sesiones, 'sesiones'), agentes: resumenSalas(agentes, 'agentes') } },
+    escenas,
+    detalles,
     pie: d.sinClasificar > 0 ? `${d.sinClasificar} sin clasificar en PROYECTOS.md` : '',
   }
   // La versión no depende de la hora de generación: si nada cambió, la página no repinta.

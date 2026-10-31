@@ -170,6 +170,23 @@ Se actualiza sola: cada 2 s vuelve a leer `.agentos/web/datos.js` (una línea `w
 
 Con `HUDDLE_NO_ABRIR=1`, `/huddle web` solo te da la ruta, sin abrir el navegador.
 
+**Escenas de la Oficina.** En la web, la Oficina tiene tres escenas, que se eligen en su cabecera, junto a los modos sesiones y agentes:
+
+- **Clásica:** las salas con sus mesas, como en el terminal.
+- **Isométrica:** una planta abierta en 2,5D con una sala por proyecto en seguimiento (con su %), GENERAL y, si hace falta, «otros». Cada sala tiene tantas mesas como personajes, y como mínimo 2.
+- **Torre:** un edificio en corte, con una planta por proyecto, la azotea arriba, el sótano de archivo abajo y el ascensor a la derecha. Con más de 5 proyectos, el edificio crece y se hace scroll.
+
+Los personajes son tus sesiones (y, en modo agentes, también sus subagentes), y caminan a su sitio cuando cambia su estado:
+
+| Estado | Isométrica | Torre |
+|---|---|---|
+| trabajando | en su mesa, con el monitor de su color | en su mesa, con el monitor encendido |
+| te espera | en el pasillo, delante de su puerta, con «!» | junto al ascensor de su planta; el timbre parpadea |
+| en pausa | en la cafetería, paseando | en la azotea, paseando |
+| inactiva | dormido en su mesa | dormido en su mesa |
+
+Cuando un subagente cambia de actividad (otra herramienta u otro fichero), va a la estantería de su sala, o baja al archivo en ascensor, y vuelve. Si no cambia nada, se queda en su puesto: no hay movimientos inventados. Al pasar el ratón ves quién es y qué hace; con un clic, su detalle, el mismo que al hacer clic en una fila de «Ejecutándose ahora» en el Panel. La escena, el modo y las etiquetas se recuerdan para la próxima vez. La animación se para cuando la pestaña no está a la vista o no estás en esas escenas.
+
 ## La carpeta de control
 
 ```

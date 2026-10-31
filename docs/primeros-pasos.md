@@ -54,6 +54,8 @@ Además del panel en el terminal, puedes ver lo mismo en el navegador, y se actu
 2. Se abre `.agentos/web/dashboard.html` en tu navegador (en WSL, en el de Windows), con el Panel y la Oficina como pestañas.
 3. Déjala abierta: cada 2 s lee los datos nuevos y se actualiza sin recargar. Si lanzas un subagente en otra sesión, aparece en un par de segundos.
 
+- En la Oficina, arriba, eliges la escena: **Clásica**, **Isométrica** (una planta con una sala por proyecto) o **Torre** (un edificio con una planta por proyecto). Tus sesiones y subagentes van de su mesa al pasillo si te esperan, y a la cafetería o la azotea si están en pausa.
+- Haz clic en un personaje, o en una fila de «Ejecutándose ahora» en el Panel, para ver su detalle. La página recuerda la escena que elegiste.
 - Para volver a abrirla otro día, vuelve a hacer `/huddle web`, o guarda la página en favoritos.
 - Para que solo te diga la ruta, sin abrir el navegador: `HUDDLE_NO_ABRIR=1`.
 - Si no usas nunca `/huddle web`, tus sesiones no escriben nada para la web.
