@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>huddle · pestaña Actividad</title>
+<style>
+:root{--surface-0:#f5f4ef;--surface-1:#faf9f5;--surface-2:#ffffff;--text-primary:#1f1e1d;--text-secondary:#5f5e5a;--text-muted:#888780;--border:rgba(0,0,0,.12);--border-strong:rgba(0,0,0,.2);--border-stronger:rgba(0,0,0,.4);--bg-success:#EAF3DE;--text-success:#3B6D11;--bg-warning:#FAEEDA;--text-warning:#854F0B;--text-danger:#A32D2D;--font-sans:system-ui,-apple-system,"Segoe UI",sans-serif;--font-mono:"Cascadia Mono","JetBrains Mono",ui-monospace,Consolas,monospace;--radius:8px}
+@media (prefers-color-scheme:dark){:root{--surface-0:#1a1a19;--surface-1:#232322;--surface-2:#2b2b29;--text-primary:#f1efe8;--text-secondary:#b4b2a9;--text-muted:#888780;--border:rgba(255,255,255,.12);--border-strong:rgba(255,255,255,.2);--border-stronger:rgba(255,255,255,.4);--bg-success:#27500A;--text-success:#C0DD97;--bg-warning:#633806;--text-warning:#FAC775;--text-danger:#F09595}}
+body{margin:0;padding:24px;background:var(--surface-0);color:var(--text-primary);font-family:var(--font-sans);max-width:880px}
+button{font:inherit;font-size:12px;color:var(--text-primary);background:transparent;border:.5px solid var(--border-strong);border-radius:var(--radius);padding:4px 10px;cursor:pointer}
+button:hover{background:var(--surface-1)}
+input{font:inherit;padding:4px 8px;border:.5px solid var(--border-strong);border-radius:var(--radius);background:var(--surface-2);color:var(--text-primary)}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.nota-ref{font-size:12px;color:var(--text-secondary);margin:0 0 12px}
+</style></head><body>
+<p class="nota-ref">Maqueta · Huddle web · pestaña nueva «Actividad» (datos inventados): detector de atascos, cronograma del día, bitácora con buscador y uso por proyecto.</p>
+<style>
+.t{font-family:var(--font-mono);font-size:12px;line-height:1.5}
+.box{background:var(--surface-2);border:0.5px solid var(--border);border-radius:8px;padding:10px 12px}
+.mut{color:var(--text-secondary)}
+.lab{color:var(--text-secondary);font-size:11px;margin-bottom:6px}
+.badge{font-size:10.5px;padding:1px 7px;border-radius:4px;white-space:nowrap}
+.chip{font-size:11px;padding:2px 10px;border-radius:999px;border:0.5px solid var(--border-strong);cursor:pointer;background:transparent;color:var(--text-primary)}
+.chip.on{background:#D85A30;border-color:#D85A30;color:#fff}
+code{font-family:var(--font-mono);background:var(--surface-1);border:0.5px solid var(--border);border-radius:4px;padding:1px 5px;font-size:11px}
+.ev{display:grid;grid-template-columns:44px 18px minmax(0,1fr);gap:6px;padding:3px 0;font-size:11.5px}
+.ic{text-align:center;border-radius:4px;font-size:10px;line-height:16px;height:16px}
+mark{background:#FAC775;color:#412402;border-radius:2px;padding:0 1px}
+.stk{border:0.5px solid var(--border-danger,#F09595);background:var(--surface-2);border-radius:8px;padding:9px 11px;border-left:3px solid #E24B4A}
+#tt{position:absolute;pointer-events:none;background:var(--surface-2);border:0.5px solid var(--border-strong);border-radius:6px;padding:4px 8px;font-size:11px;display:none;white-space:nowrap;z-index:2}
+</style>
+<div class="t" style="background:var(--surface-1);border-radius:12px;padding:12px;border:0.5px solid var(--border)">
+<div style="display:flex;justify-content:space-between;margin-bottom:10px"><span><span class="mut" style="padding:2px 10px">Panel</span> <span class="mut" style="padding:2px 10px">Oficina</span> <span style="background:#D85A30;color:#fff;padding:2px 10px;border-radius:6px">Actividad</span></span><span class="mut">huddle · sáb 31 oct · 20:41</span></div>
+
+<div class="box"><div style="display:flex;justify-content:space-between"><span class="lab">Atascos · <b style="color:var(--text-danger);font-weight:500">2</b> sesiones parecen en bucle</span><span class="mut" style="font-size:11px">se revisa en cada evento</span></div>
+<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px" id="stuck"></div></div>
+
+<div class="box" style="margin-top:8px;position:relative">
+<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px"><span class="lab" style="margin:0">Cronograma de hoy</span><span id="kp" style="font-size:11px"></span></div>
+<svg id="tl" width="100%" viewBox="0 0 800 196" role="img" style="margin-top:6px"><title>Cronograma de sesiones de hoy</title></svg><div id="tt"></div>
+<div class="mut" style="font-size:11px;display:flex;gap:14px;flex-wrap:wrap"><span><span style="color:#1D9E75">■</span> trabajando</span><span><span style="color:#EF9F27">■</span> esperándote</span><span><span style="color:#B4B2A9">■</span> pausa</span><span><span style="color:#E24B4A">■</span> atascada</span><span>│ ahora</span></div>
+</div>
+
+<div style="display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:8px;margin-top:8px">
+<div class="box">
+<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap"><span class="lab" style="margin:0">Bitácora</span><input id="q" placeholder="buscar: auth.ts, test, merge…" style="font-size:11px;width:210px"></div>
+<div id="sess" style="display:flex;gap:4px;flex-wrap:wrap;margin:8px 0 4px"></div>
+<div id="qinfo" class="mut" style="font-size:11px;margin-bottom:4px"></div>
+<div id="blog" style="max-height:270px;overflow:auto;border-top:0.5px solid var(--border);padding-top:4px"></div>
+</div>
+<div class="box">
+<div style="display:flex;justify-content:space-between;align-items:center"><span class="lab" style="margin:0">Uso por proyecto</span><span id="per" style="display:flex;gap:4px"></span></div>
+<div style="display:flex;gap:12px;align-items:center;margin:10px 0"><svg width="84" height="84" viewBox="0 0 42 42" id="ring" role="img"><title>Uso del periodo</title></svg><div id="rtxt" style="font-size:11.5px;line-height:1.6"></div></div>
+<div id="ubars"></div><div id="unote" style="font-size:11px;margin-top:8px"></div>
+</div>
+</div>
+</div>
+<script>
+const ST=[{s:'proyecto-b · docs',p:'proyecto-b',why:'mismo comando falla 4 veces seguidas',ev:'<code>pnpm build</code> → «Cannot find module \'./i18n\'»',since:'hace 12 min',sug:'Probablemente le falta el fichero o la ruta cambió. Revisa o dale una pista.'},
+{s:'rimor · main',p:'rimor',why:'edita el mismo fichero 7 veces sin que pasen los tests',ev:'<code>src/api/auth.ts</code> · tests 41/48 → 42/48 → 41/48',since:'hace 21 min',sug:'Da vueltas sobre el mismo error. Quizá conviene replantear el enfoque.'}];
+document.getElementById('stuck').innerHTML=ST.map(s=>`<div class="stk"><div style="display:flex;justify-content:space-between;gap:6px"><b style="font-weight:500">${s.s}</b><span class="mut" style="font-size:11px">${s.since}</span></div><div style="color:var(--text-danger);font-size:11.5px;margin:2px 0">${s.why}</div><div style="font-size:11.5px">${s.ev}</div><div class="mut" style="font-size:11px;margin:4px 0 6px">${s.sug}</div><div style="display:flex;gap:6px"><button onclick="this.textContent='copiado ✓'">/abrir ${s.p} ↗</button><button onclick="this.closest('.stk').style.opacity=.4;this.textContent='ignorado'">ignorar</button></div></div>`).join('');
+const H0=9,H1=21.5,NOW=20+41/60,X=h=>130+(h-H0)/(H1-H0)*655;
+const S=[['struo · feat-auth',[[9.2,'w',11.1],[11.1,'a',11.35],[11.35,'w',13.0],[13.0,'p',15.4],[15.4,'w',17.2],[17.2,'a',17.5],[17.5,'w',NOW]]],
+['struo · feat-export',[[16.1,'w',18.0],[18.0,'a',18.3],[18.3,'w',20.2],[20.2,'a',NOW]]],
+['rimor · main',[[10.0,'w',12.4],[12.4,'a',12.7],[12.7,'w',14.0],[19.53,'w',20.33],[20.33,'x',NOW]]],
+['proyecto-b · main',[[9.5,'w',10.6],[10.6,'a',10.75],[10.75,'w',13.4],[16.0,'w',18.8],[18.8,'p',NOW]]],
+['proyecto-b · docs',[[18.5,'w',20.3],[20.3,'x',NOW]]],
+['GENERAL · torre',[[9.1,'w',9.3],[14.0,'w',14.2],[20.4,'w',NOW]]]];
+const C={w:'#1D9E75',a:'#EF9F27',p:'#B4B2A9',x:'#E24B4A'},N={w:'trabajando',a:'esperándote',p:'pausa',x:'atascada'};
+const hm=h=>`${Math.floor(h)}:${String(Math.round((h%1)*60)).padStart(2,'0')}`;
+let g='';for(let h=9;h<=21;h++){g+=`<line x1="${X(h)}" x2="${X(h)}" y1="14" y2="190" stroke="var(--border)"/><text x="${X(h)}" y="10" text-anchor="middle" font-size="9" fill="var(--text-secondary)" font-family="var(--font-mono)">${h}h</text>`}
+S.forEach((r,i)=>{const y=22+i*28;g+=`<text x="0" y="${y+13}" font-size="10.5" fill="var(--text-primary)" font-family="var(--font-mono)">${r[0]}</text><rect x="130" y="${y+3}" width="655" height="14" rx="3" fill="var(--surface-1)"/>`;
+r[1].forEach(s=>{g+=`<rect class="sg" x="${X(s[0])}" y="${y+3}" width="${Math.max(1.5,X(s[2])-X(s[0]))}" height="14" rx="2" fill="${C[s[1]]}" data-t="${r[0]} · ${N[s[1]]} · ${hm(s[0])}–${s[2]==NOW?'ahora':hm(s[2])} (${Math.round((s[2]-s[0])*60)} min)"/>`})});
+g+=`<line x1="${X(NOW)}" x2="${X(NOW)}" y1="14" y2="190" stroke="var(--text-primary)" stroke-width="1.2"/>`;
+const tl=document.getElementById('tl');tl.innerHTML=g;const tt=document.getElementById('tt');
+tl.querySelectorAll('.sg').forEach(e=>{e.onmousemove=ev=>{const r=tl.parentElement.getBoundingClientRect();tt.style.display='block';tt.style.left=(ev.clientX-r.left+10)+'px';tt.style.top=(ev.clientY-r.top+10)+'px';tt.textContent=e.dataset.t};e.onmouseleave=()=>tt.style.display='none'});
+let wait=0,mx=0,mxs='',nw=0;S.forEach(r=>r[1].forEach(s=>{if(s[1]=='a'){const m=(s[2]-s[0])*60;wait+=m;nw++;if(m>mx){mx=m;mxs=r[0]}}}));
+document.getElementById('kp').innerHTML=`<b style="color:var(--text-warning);font-weight:500">${Math.round(wait)} min</b> esperándote hoy · media ${Math.round(wait/nw)} min · máx. ${Math.round(mx)} min <span class="mut">(${mxs})</span>`;
+const B={'rimor · main':[['20:38','✎','edit','src/api/auth.ts (+3 −4) · 7.ª edición'],['20:36','▶','bash','pnpm test · 41/48 ✗'],['20:31','✎','edit','src/api/auth.ts (+5 −2)'],['20:29','▶','bash','pnpm test · 42/48 ✗'],['20:18','⇢','sub','Explore · «buscar usos de getUser» · 2 min'],['20:09','✎','edit','src/api/users.ts (+42 −8)'],['19:51','⇢','sub','Plan · «diseñar endpoint /users» · 4 min'],['19:32','●','start','sesión iniciada · «añadir API de usuarios»']],
+'struo · feat-export':[['20:34','!','perm','pide permiso: pnpm db:migrate --env=staging'],['20:30','✎','edit','db/migrations/0042_export.sql (+30)'],['20:21','▶','bash','pnpm test export · 12/12 ✓'],['19:12','▶','bash','git merge develop · ok'],['18:10','⇢','sub','Explore · «formato CSV actual» · 3 min']],
+'struo · feat-auth':[['20:12','▶','bash','pnpm test auth · 30/30 ✓'],['19:40','✎','edit','src/auth/session.ts (+18 −6)'],['17:20','!','perm','pide permiso: git push origin feat-auth'],['15:30','✎','edit','src/auth.ts (+60 −12)']],
+'proyecto-b · docs':[['20:40','▶','bash','pnpm build · ✗ Cannot find module \'./i18n\''],['20:37','▶','bash','pnpm build · ✗ Cannot find module \'./i18n\''],['20:33','▶','bash','pnpm build · ✗ Cannot find module \'./i18n\''],['20:30','▶','bash','pnpm build · ✗ Cannot find module \'./i18n\''],['19:50','✎','edit','docs/config.ts (+9 −14)']]};
+const IC={'?':['#FAEEDA','#854F0B'],'!':['#FCEBEB','#A32D2D'],'▶':['#E6F1FB','#0C447C'],'✎':['#EEEDFE','#3C3489'],'⇢':['#E1F5EE','#085041'],'●':['#F1EFE8','#444441']};
+let cs='todas';
+function esc(s){return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}
+function bit(){const q=document.getElementById('q').value.trim();document.getElementById('sess').innerHTML=['todas',...Object.keys(B)].map(k=>`<button class="chip ${k==cs?'on':''}" data-k="${k}">${k}</button>`).join('');document.querySelectorAll('#sess .chip').forEach(c=>c.onclick=()=>{cs=c.dataset.k;bit()});
+let rows=[];Object.entries(B).forEach(([k,ev])=>{if(cs=='todas'||cs==k)ev.forEach(e=>rows.push([k,...e]))});rows.sort((a,b)=>b[1].localeCompare(a[1]));
+if(q)rows=rows.filter(r=>(r[4]+' '+r[0]).toLowerCase().includes(q.toLowerCase()));
+document.getElementById('qinfo').innerHTML=q?`${rows.length} resultados para «${q}»${rows.length?' en '+[...new Set(rows.map(r=>r[0]))].join(', '):''}`:'';
+const hl=s=>q?s.replace(new RegExp('('+esc(q)+')','ig'),'<mark>$1</mark>'):s;
+document.getElementById('blog').innerHTML=rows.map(r=>`<div class="ev"><span class="mut">${r[1]}</span><span class="ic" style="background:${IC[r[2]][0]};color:${IC[r[2]][1]}">${r[2]}</span><span>${hl(r[4])}${cs=='todas'?` <span class="mut" style="font-size:10.5px">· ${r[0]}</span>`:''}</span></div>`).join('')||'<div class="mut" style="padding:8px 0">Sin resultados.</div>'}
+document.getElementById('q').addEventListener('input',bit);bit();
+const U={hoy:{lim:'sesión 5 h',used:.64,reset:'reinicia en 2 h 10 min',p:[['rimor',.31,'#D85A30'],['struo',.22,'#7F77DD'],['proyecto-b',.07,'#1D9E75'],['GENERAL',.04,'#888780']],note:'rimor se lleva casi la mitad: 7 ediciones del mismo fichero en la última hora.'},
+semana:{lim:'semana',used:.41,reset:'reinicia jue 09:00',p:[['struo',.17,'#7F77DD'],['rimor',.13,'#D85A30'],['proyecto-b',.08,'#1D9E75'],['GENERAL',.03,'#888780']],note:'A este ritmo llegas al jueves con un 18 % de margen.'}};
+let per='hoy';
+function uso(){document.getElementById('per').innerHTML=['hoy','semana'].map(k=>`<button class="chip ${k==per?'on':''}" data-p="${k}">${k}</button>`).join('');document.querySelectorAll('#per .chip').forEach(c=>c.onclick=()=>{per=c.dataset.p;uso()});
+const u=U[per];let a=0,r='<circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--surface-1)" stroke-width="5"/>';u.p.forEach(p=>{r+=`<circle cx="21" cy="21" r="15.9" fill="none" stroke="${p[2]}" stroke-width="5" stroke-dasharray="${p[1]*100} ${100-p[1]*100}" stroke-dashoffset="${25-a*100}"><title>${p[0]}: ${Math.round(p[1]*100)} %</title></circle>`;a+=p[1]});r+=`<text x="21" y="23.5" text-anchor="middle" font-size="7" fill="var(--text-primary)" font-family="var(--font-mono)">${Math.round(u.used*100)}%</text>`;document.getElementById('ring').innerHTML=r;
+document.getElementById('rtxt').innerHTML=`<b style="font-weight:500">${Math.round(u.used*100)} %</b> de la ${u.lim}<br><span class="mut">${u.reset}</span>`;
+document.getElementById('ubars').innerHTML=u.p.map(p=>`<div style="margin-bottom:7px"><div style="display:flex;justify-content:space-between;font-size:11px"><span><span style="color:${p[2]}">■</span> ${p[0]}</span><span><b style="font-weight:500">${Math.round(p[1]*100)} %</b> <span class="mut">· ${Math.round(p[1]/u.used*100)} % de lo usado</span></span></div><div style="height:7px;border-radius:4px;background:var(--surface-1);margin-top:2px"><div style="height:7px;border-radius:4px;width:${p[1]/u.used*100}%;background:${p[2]}"></div></div></div>`).join('');
+document.getElementById('unote').innerHTML=`<span style="color:var(--text-warning)">▲</span> ${u.note}`}
+uso();
+</script>
+</body></html>

@@ -3,6 +3,8 @@
 
 import type { EngineInterface } from 'claude-code'
 
+import type { Umbrales } from './atascos.ts'
+import { UMBRALES_POR_DEFECTO } from './atascos.ts'
 import { escribirAtomico, leerTexto } from './ficheros.ts'
 import { normalizar, unir } from './rutas.ts'
 
@@ -17,6 +19,8 @@ export type Config = {
   inactiva_min: number
   /** El capricho estacional de Rex. */
   rex: { estacional: boolean }
+  /** Umbrales del detector de atascos (pestaña Actividad de la web). */
+  atascos: Umbrales
 }
 
 export const CONFIG_POR_DEFECTO: Config = {
@@ -27,6 +31,7 @@ export const CONFIG_POR_DEFECTO: Config = {
   limites: { sesion_5h_tokens: null, semana_tokens: null, reinicio_semanal: 'jue 09:00' },
   inactiva_min: 30,
   rex: { estacional: true },
+  atascos: { ...UMBRALES_POR_DEFECTO },
 }
 
 function objeto(v: unknown): Record<string, unknown> {
@@ -59,6 +64,7 @@ export function interpretarConfig(json: string): { config: Config; avisos: strin
   const n = objeto(bruto.notificaciones)
   const l = objeto(bruto.limites)
   const r = objeto(bruto.rex)
+  const a = objeto(bruto.atascos)
   const config: Config = {
     general_dir: texto(bruto.general_dir, '') && normalizar(texto(bruto.general_dir, '')),
     raiz_proyectos: texto(bruto.raiz_proyectos, '') && normalizar(texto(bruto.raiz_proyectos, '')),
@@ -74,6 +80,12 @@ export function interpretarConfig(json: string): { config: Config; avisos: strin
     },
     inactiva_min: numero(bruto.inactiva_min, d.inactiva_min, 1),
     rex: { estacional: typeof r.estacional === 'boolean' ? r.estacional : d.rex.estacional },
+    atascos: {
+      comando_repeticiones: numero(a.comando_repeticiones, d.atascos.comando_repeticiones, 2),
+      fichero_ediciones: numero(a.fichero_ediciones, d.atascos.fichero_ediciones, 2),
+      fichero_minutos: numero(a.fichero_minutos, d.atascos.fichero_minutos, 1),
+      sin_progreso_minutos: numero(a.sin_progreso_minutos, d.atascos.sin_progreso_minutos, 1),
+    },
   }
   return { config, avisos }
 }

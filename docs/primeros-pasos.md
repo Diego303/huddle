@@ -56,6 +56,7 @@ Además del panel en el terminal, puedes ver lo mismo en el navegador, y se actu
 
 - En la Oficina, arriba, eliges la escena: **Clásica**, **Isométrica** (una planta con una sala por proyecto) o **Torre** (un edificio con una planta por proyecto). Tus sesiones y subagentes van de su mesa al pasillo si te esperan, y a la cafetería o la azotea si están en pausa.
 - Haz clic en un personaje, o en una fila de «Ejecutándose ahora» en el Panel, para ver su detalle. La página recuerda la escena que elegiste.
+- La pestaña **Actividad** te dice qué sesiones parecen atascadas (dando vueltas al mismo error), cuánto te han esperado hoy, qué ha hecho cada sesión (con un buscador de los últimos 7 días) y qué parte del uso se lleva cada proyecto. Si una sesión está atascada, te llega un aviso.
 - Para volver a abrirla otro día, vuelve a hacer `/huddle web`, o guarda la página en favoritos.
 - Para que solo te diga la ruta, sin abrir el navegador: `HUDDLE_NO_ABRIR=1`.
 - Si no usas nunca `/huddle web`, tus sesiones no escriben nada para la web.

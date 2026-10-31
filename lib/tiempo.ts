@@ -68,3 +68,23 @@ export function ultimoReinicio(ms: number, desfaseMin: number, texto: string): n
   if (candidato > ms + desfaseMin * 60_000) candidato -= 7 * 86_400_000
   return candidato - desfaseMin * 60_000
 }
+
+const SEMANA_CORTA = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb']
+
+/** `jue 09:00`: día de la semana y hora local. */
+export function diaYHora(ms: number, desfaseMin: number): string {
+  const p = partes(ms, desfaseMin)
+  return `${SEMANA_CORTA[p.semana]} ${dos(p.h)}:${dos(p.min)}`
+}
+
+/** `09:05`: la hora local. */
+export function horaMinuto(ms: number, desfaseMin: number): string {
+  const p = partes(ms, desfaseMin)
+  return `${dos(p.h)}:${dos(p.min)}`
+}
+
+/** La medianoche local del día de `ms`, en ms. */
+export function medianoche(ms: number, desfaseMin: number): number {
+  const local = ms + desfaseMin * 60_000
+  return ms - (((local % 86_400_000) + 86_400_000) % 86_400_000)
+}

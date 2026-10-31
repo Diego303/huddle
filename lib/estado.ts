@@ -2,6 +2,7 @@
 // Es una función pura: los hooks traducen los eventos del motor a `Evento` y
 // aplican `aplicar`; los tests hacen lo mismo con los payloads capturados.
 
+import type { Atasco } from './atascos.ts'
 import { detalleDeHerramienta, esHerramientaDeAgente, recortar, tipoDeAgente } from './detalle.ts'
 
 export type EstadoNombre = 'trabajando' | 'te_espera' | 'en_pausa'
@@ -18,6 +19,9 @@ export type Agente = {
   estado: EstadoNombre
   detalle: string
 }
+
+/** El atasco de una sesión, como se guarda en su estado. `id`: corto, para ignorarlo desde la web. */
+export type AtascoSesion = Atasco & { id: string; avisado: boolean; ignorado: boolean }
 
 export type VentanaUso = { pct: number; reinicia: string | null }
 
@@ -48,6 +52,10 @@ export type EstadoSesion = {
   transcript_path: string | null
   agentes: Agente[]
   uso: Uso | null
+  /** Lo que detecta lib/atascos (null si no hay). */
+  atasco?: AtascoSesion | null
+  /** Cuántas tareas le has dado (prompts tuyos): un atasco ignorado vale hasta la siguiente. */
+  tarea?: number
 }
 
 /** Lo que interesa de `$.agent.list()`. */

@@ -16,7 +16,7 @@ const AHORA = Date.parse('2026-10-31T00:46:00+01:00')
 function datos(c: Partial<DatosPanel>): DatosPanel {
   return {
     generado: AHORA, desfase: 60, general_dir: '/g', raiz: '/r', inactiva_min: 30, sesiones: [], fichas: [], hoy: null, siguiente: [],
-    dias: [], turnosTotales: 0, uso: null, sinClasificar: 0, ultimoRefresh: null, git: {}, usoEstimado: null, rex_estacional: true, seguimiento: [], enSeguimiento: 0, ...c,
+    dias: [], turnosTotales: 0, uso: null, sinClasificar: 0, ultimoRefresh: null, git: {}, usoEstimado: null, rex_estacional: true, seguimiento: [], enSeguimiento: 0, tokensProyecto: {}, ignorados: [], limites: { sesion_5h_tokens: null, semana_tokens: null, reinicio_semanal: 'jue 09:00' }, ...c,
   }
 }
 

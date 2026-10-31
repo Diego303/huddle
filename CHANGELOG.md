@@ -26,6 +26,7 @@ Primera versión.
 - `/huddle web`: el Panel y la Oficina en el navegador, en un único fichero autocontenido que relee `datos.js` cada 2 s.
 - Escenas de la Oficina: **Clásica**, **Isométrica** (planta abierta en 2,5D, una sala por proyecto) y **Torre** (edificio en corte, una planta por proyecto, azotea, sótano y ascensor), en canvas 2D. Los personajes salen de los datos reales y caminan según su estado; un subagente que cambia de actividad va a la estantería o al archivo y vuelve.
 - Detalle de cada sesión y subagente al hacer clic en un personaje o en el árbol «Ejecutándose ahora».
+- Pestaña **Actividad**: atascos (comando en bucle, fichero en bucle y sin progreso, con un aviso por atasco), cronograma de hoy con las métricas de espera, bitácora de cada sesión con buscador de 7 días y uso de 5 h y semanal por proyecto. Datos nuevos en `.agentos/bitacora/` y `.agentos/tramos/`, que se borran a los 7 días; `/huddle ignorar <id>`.
 
 ### Alertas
 - Contexto ≥ 80 %, sesión esperando más de 5 min, commits sin push, cambios sin commitear más de 3 días, CI en rojo (con `gh`) y carpetas sin clasificar.
