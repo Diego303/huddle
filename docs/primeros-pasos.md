@@ -27,8 +27,10 @@ Dentro de Claude Code:
 4. En Claude Code, dentro de la carpeta de control:
    ```
    /proyectos
+   /fichas
    /refresh
    ```
+   `/fichas` hace que Claude mire cada proyecto, en solo lectura, y rellene en su ficha la fase, el estado, las tareas y los próximos pasos. Tarda unos minutos y te avisa al acabar. Revisa lo que proponga: el progreso por proyecto sale de esas tareas (`- [ ]` pendiente, `- [x]` hecha).
 
 ## 3. Uso diario
 

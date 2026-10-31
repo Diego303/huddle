@@ -148,6 +148,7 @@ cd /mnt/d/GitHub/GENERAL && claude
 | `/huddle web` | Abre la vista web en el navegador; se actualiza sola, sin recargar |
 | `/proyecto <nombre> [tests]` | Detalle de un proyecto: ficha, git y sesiones. Con `tests`, Claude ejecuta sus tests sin cambiar nada |
 | `/preguntar <proyecto> "<pregunta>"` | Pregunta a la sesión de un proyecto, en solo lectura |
+| `/fichas [proyecto]` | Claude rellena lo que falta en las fichas (fase, estado, tareas y próximos pasos), en solo lectura y en segundo plano |
 | `/abrir <proyecto>` | Abre una pestaña nueva de terminal con Claude Code en ese proyecto |
 | `/registro "<texto>"` | Apunta algo en el diario |
 | `/cierre` | Resumen del día y próximos pasos; desmarca «Hoy» para mañana |
@@ -206,9 +207,11 @@ El contexto de cada sesión y el uso de 5 h y semanal son los datos oficiales de
 
 **Privacidad:** no se guarda el texto de tus prompts ni de las respuestas. De cada herramienta solo se anota la ruta del fichero, la descripción del subagente o, en Bash, el nombre del programa. Todo se queda en tu máquina.
 
-**Qué lee de tus proyectos:** solo los metadatos de git (rama, cambios pendientes, commits recientes) y, una sola vez, las primeras 40 líneas del README para crear la ficha del proyecto. No lee tu código salvo que se lo pidas con `/proyecto` o `/preguntar`.
+**Qué lee de tus proyectos:** solo los metadatos de git (rama, cambios pendientes, commits recientes) y, una sola vez, las primeras 40 líneas del README para crear la ficha del proyecto. No lee tu código salvo que se lo pidas con `/proyecto`, `/preguntar` o `/fichas`.
 
 **`/preguntar` en solo lectura:** si la sesión del proyecto está en pausa o inactiva, se retoma en una bifurcación (`--fork-session`) que no se guarda; si está trabajando o no hay ninguna, se lanza un `claude -p` nuevo en el repo. En los dos casos solo puede leer ficheros y ejecutar `git log/status/diff/show`, `ls`, `grep`, `rg`, `cat`, `head` y `wc`.
+
+**`/fichas`:** hace esa misma consulta por cada proyecto en seguimiento (tres a la vez) y le pide a Claude la fase, el objetivo, el estado, las tareas (marcando como hechas las que el código o el git muestran terminadas), los bloqueos y los próximos pasos. Solo rellena lo que sigue como en la plantilla: lo que hayas escrito tú no se toca. Lo propuesto lleva la marca «propuesto por Claude». El progreso por proyecto sale de esas casillas. Al acabar, avisa y lo apunta en el registro con el coste.
 
 ## Desarrollo
 

@@ -8,6 +8,7 @@ import { configurar } from '../lib/comandos/configurar.ts'
 import { directorio } from '../lib/comandos/directorio.ts'
 import { abrir } from '../lib/comandos/abrir.ts'
 import { cierre } from '../lib/comandos/cierre.ts'
+import { fichas } from '../lib/comandos/fichas.ts'
 import { preguntar } from '../lib/comandos/preguntar.ts'
 import { proyecto } from '../lib/comandos/proyecto.ts'
 import { proyectos } from '../lib/comandos/proyectos.ts'
@@ -89,6 +90,11 @@ async function registrarComandos($: EngineInterface): Promise<void> {
     name: 'preguntar',
     description: 'Huddle: pregunta a la sesión de un proyecto, en solo lectura',
     argumentHint: '<proyecto> "<pregunta>"',
+  })
+  await $.command.register({
+    name: 'fichas',
+    description: 'Huddle: Claude rellena lo que falta en las fichas (fase, estado, tareas…), en solo lectura',
+    argumentHint: '[proyecto]',
   })
   await $.command.register({
     name: 'abrir',
@@ -260,6 +266,13 @@ export const register: Register = on => {
   on('command.run', { command: 'preguntar' }, async ($, e) => {
     try {
       return { text: await preguntar($, e.args ?? '') }
+    } catch (err) {
+      return fallo(err)
+    }
+  })
+  on('command.run', { command: 'fichas' }, async ($, e) => {
+    try {
+      return { text: await fichas($, e.args ?? '') }
     } catch (err) {
       return fallo(err)
     }

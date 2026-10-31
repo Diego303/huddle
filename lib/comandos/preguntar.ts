@@ -5,6 +5,7 @@
 
 import type { EngineInterface } from 'claude-code'
 
+import type { Config } from '../config.ts'
 import { estaConfigurada, leerConfig } from '../config.ts'
 import type { EstadoSesion } from '../estado.ts'
 import { leerTexto } from '../ficheros.ts'
@@ -89,6 +90,20 @@ async function sesionesDe($: EngineInterface, dir: string, carpeta: string): Pro
   return out
 }
 
+export type SesionQuieta = { id: string; leadId: string; cwd: string }
+
+/**
+ * La sesión más reciente del proyecto que no esté trabajando ni esperando: se
+ * puede retomar en una bifurcación sin molestarla. Si no hay, null.
+ */
+export async function sesionQuieta($: EngineInterface, config: Config, carpeta: string): Promise<SesionQuieta | null> {
+  const vistas = vistaSesiones(await sesionesDe($, unir(config.general_dir, '.agentos', 'estado'), carpeta), Date.now(), config.inactiva_min)
+  const v = vistas
+    .filter(x => x.estado === 'en_pausa' || x.estado === 'inactiva')
+    .sort((a, b) => Date.parse(b.s.ultimo_evento) - Date.parse(a.s.ultimo_evento))[0]
+  return v ? { id: v.s.session_id, leadId: v.leadId, cwd: v.s.cwd } : null
+}
+
 export async function preguntar($: EngineInterface, args: string): Promise<string> {
   const { config } = await leerConfig($)
   if (!estaConfigurada(config)) return 'Huddle aún no está configurado: ejecuta /configurar en tu carpeta de control.'
@@ -98,13 +113,9 @@ export async function preguntar($: EngineInterface, args: string): Promise<strin
   if (e === null || pregunta === '') return `Uso: /preguntar <proyecto> "<pregunta>". En seguimiento: ${listaProyectos(entradas)}`
   const ruta = unir(config.raiz_proyectos, e.carpeta)
 
-  // La sesión más reciente del proyecto que no esté trabajando ni esperando.
-  const vistas = vistaSesiones(await sesionesDe($, unir(config.general_dir, '.agentos', 'estado'), e.carpeta), Date.now(), config.inactiva_min)
-  const quieta = vistas
-    .filter(v => v.estado === 'en_pausa' || v.estado === 'inactiva')
-    .sort((a, b) => Date.parse(b.s.ultimo_evento) - Date.parse(a.s.ultimo_evento))[0]
-  const retomar = quieta?.s.session_id ?? null
-  const cwd = quieta?.s.cwd ?? ruta
+  const quieta = await sesionQuieta($, config, e.carpeta)
+  const retomar = quieta?.id ?? null
+  const cwd = quieta?.cwd ?? ruta
 
   let r: Respuesta
   try {

@@ -10,7 +10,7 @@ import type { SistemaFalso } from './ayuda/sistema-falso.ts'
 const RAIZ = '/mnt/d/huddle-pruebas'
 const GENERAL = `${RAIZ}/GENERAL`
 const CONFIG = '/home/usuario/.config/huddle/config.json'
-const TODOS = ['configurar', 'directorio', 'proyectos', 'panel', 'oficina', 'refresh', 'proyecto', 'preguntar', 'abrir', 'registro', 'cierre', 'huddle']
+const TODOS = ['configurar', 'directorio', 'proyectos', 'panel', 'oficina', 'refresh', 'proyecto', 'preguntar', 'fichas', 'abrir', 'registro', 'cierre', 'huddle']
 
 function sistema(cwd: string, configurado: boolean): SistemaFalso {
   return crearSistema({
