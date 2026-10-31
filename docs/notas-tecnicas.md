@@ -217,3 +217,17 @@ huddle/
 - **Sesiones que no cuentan:** las no interactivas (`claude -p`, SDK) y las que tienen `HUDDLE_IGNORAR=1` (lo usará `/preguntar`). Sin config, o si la carpeta de control no existe, Huddle no hace nada.
 - **Avisos:** uno por sesión cada `repetir_min` minutos, al **entrar** en `te_espera`. La torre no se avisa a sí misma. En la prueba real llegó un toast de Windows al pedir permiso `api-pagos`.
 - **Cierre:** `session.end` borra el fichero. Tras `/exit` puede tardar unos segundos, lo que tarda Claude Code en cerrar. Se corrigió una carrera: si había una escritura a medias cuando se cerraba la sesión, el `mv` podía recrear el fichero. Ahora se vuelve a borrar, y hay un test que falla sin el arreglo.
+
+## 7. Decisiones de la Fase 3
+
+- **Solo la torre dibuja:** al arrancar en la carpeta de control (sesión de tipo `torre`), Huddle abre el panel (`$.ui.open`, pidiendo 90 columnas y 44 filas). Lee `.agentos/` cada 2 s y avanza un fotograma de animación cada 600 ms. El resto de sesiones no lee nada.
+- **Lector (`lib/lector.ts`):** lista los directorios y solo relee un fichero si cambió su `mtime`. Un JSON a medio escribir se ignora y se conserva el último bueno. Solo publica en `$.state` cuando algo cambió.
+- **Contrato de `$.state`:** el panel se publica como un JSON en texto (`huddle.datos`, con forma `datos-1`) para que `types/index.d.ts` no dependa de otros ficheros. El validador exige que los átomos estén declarados en el mismo fichero donde se leen; por eso el dibujo del panel vive en `lib/torre.ts`.
+- **Composición en texto puro (`mod/panel.ts` + `mod/lienzo.ts`):** el panel son líneas de segmentos con color, y `mod/dibujar.tsx` las convierte en `Box`/`Text`. Rex es un `Raster` en el terminal y texto con fondo por celda en las demás superficies. Así los tests comprueban el contenido y el ancho exacto de cada línea, y el kit monta el panel de verdad en terminal y escritorio.
+- **Disposiciones:** por debajo de 100 columnas, compacta en una sola columna; es la principal, el panel acoplado de ~89. Desde 100, ancha: Rex junto a contadores y sesiones, y dos columnas debajo. Si la lista de sesiones no cabe, se corta con «… y N más».
+- **IDs visibles:** `<CÓD>-lead-NN` y `<CÓD>-<tipo>-NN`, numerados por proyecto según el orden de inicio, calculados al dibujar.
+- **Contadores:** «Agentes N +M sub» cuenta los leads que están trabajando y los subagentes que no están en pausa.
+- **Rex:** `alerta` > `celebrando` (una ficha llegó al 100 % y se modificó en las últimas 24 h) > `trabajando` > `durmiendo`. El nivel empieza en 1 y sube uno cada 100 turnos. La racha cuenta los días seguidos con turnos o commits, y si hoy aún no hay nada empieza a contar en ayer. Los commits llegan con `/refresh` (Fase 5); hasta entonces, en la actividad se ven como `·` (n/d).
+- **Uso:** el de la propia torre (`$.session.usage()` en cada lectura) o el más reciente que guardó cualquier sesión. Sin dato, `n/d · configúralo en config.json`.
+- **Siguiente acción:** la de `ESTADO.md`; si no hay, por reglas, marcada «(por reglas)»: primero lo que te espera y luego el contexto alto. Las de commits sin push llegan con `/refresh`.
+- **Prueba real (pantalla completa, 200 × 50):** el panel se acopló con 89 columnas. Al pedir permiso otra sesión, en ≤ 2 s pasó a «Te esperan 1», Rex se puso en alerta («¡feat-x te espera!») y apareció `STR-explore-01`. Tras aprobar, pasó a trabajando y luego a durmiendo, con el contexto real (4 %).

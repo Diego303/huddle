@@ -141,6 +141,13 @@ function ventana(uso: UsoMotor, kind: string): VentanaUso | null {
   return v ? { pct: v.percentUsed, reinicia: v.resetsAt ?? null } : null
 }
 
+/** Los periodos de 5 h y semanal de `$.session.usage()`; null si no hay (sin suscripción). */
+export function usoDe(uso: UsoMotor, ahora: string): Uso | null {
+  const cinco = ventana(uso, 'five_hour')
+  const semana = ventana(uso, 'seven_day')
+  return cinco || semana ? { cinco_horas: cinco, semana, leido: ahora } : null
+}
+
 export function aplicar(s: EstadoSesion, e: Evento, ahora: string): EstadoSesion {
   const t = { ...s, ultimo_evento: ahora }
   switch (e.tipo) {
@@ -190,7 +197,7 @@ export function aplicar(s: EstadoSesion, e: Evento, ahora: string): EstadoSesion
         }
       }
       if (e.agentId !== undefined) return conAgente(u, e.agentId, a => ({ ...a, estado: 'trabajando' }))
-      return pasarA(u, 'trabajando', s.estado === 'te_espera' ? 'sigue' : u.detalle, ahora)
+      return pasarA(u, 'trabajando', s.estado === 'te_espera' ? 'retomando' : u.detalle, ahora)
     }
 
     case 'permiso': {
@@ -204,7 +211,7 @@ export function aplicar(s: EstadoSesion, e: Evento, ahora: string): EstadoSesion
       return t.estado === 'te_espera' ? t : pasarA(t, 'te_espera', 'te espera', ahora)
 
     case 'permiso_resuelto':
-      return t.estado === 'te_espera' ? pasarA(t, 'trabajando', 'sigue', ahora) : t
+      return t.estado === 'te_espera' ? pasarA(t, 'trabajando', 'retomando', ahora) : t
 
     case 'subagente_inicio': {
       if (t.agentes.some(a => a.agent_id === e.agentId)) return t
@@ -253,15 +260,14 @@ export function aplicar(s: EstadoSesion, e: Evento, ahora: string): EstadoSesion
 
     case 'uso': {
       const c = e.uso.context
-      const cinco = ventana(e.uso, 'five_hour')
-      const semana = ventana(e.uso, 'seven_day')
+      const nuevo = usoDe(e.uso, ahora)
       return {
         ...s,
         contexto_pct: c.percent ?? null,
         contexto_tokens: c.tokens ?? null,
         ventana: c.window,
         modelo: e.modelo ?? s.modelo,
-        uso: cinco || semana ? { cinco_horas: cinco, semana, leido: ahora } : s.uso,
+        uso: nuevo ?? s.uso,
       }
     }
 

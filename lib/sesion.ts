@@ -111,6 +111,18 @@ export function estadoActual(): EstadoSesion | null {
   return ctx.estado
 }
 
+export function configActual(): Config | null {
+  return ctx.activo ? ctx.config : null
+}
+
+export function desfaseActual(): number {
+  return ctx.desfase
+}
+
+export function ahoraLocal(): string {
+  return ahora()
+}
+
 export function rutaEstado(id: string): string {
   return unir(ctx.dirEstado, `${id}.json`)
 }
