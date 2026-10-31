@@ -14,12 +14,22 @@ import type { Casillas, Dia, Ficha } from './panel-datos.ts'
 import { casillas, interpretarFicha, seccion, siguienteAccion, usoMasReciente } from './panel-datos.ts'
 import { interpretarProyectos } from './proyectos.ts'
 import { unir } from './rutas.ts'
-import { ultimosDias } from './tiempo.ts'
+import { horaLocal, ultimosDias, ultimoReinicio } from './tiempo.ts'
 
 export type FichaLeida = Ficha & { mtime: number }
 
 /** Lo que el panel usa de git-cache.json, por proyecto. */
-export type GitPanel = { rama: string | null; ahead: number; cambios: number; sucio_desde: string | null; error: string | null }
+export type GitPanel = {
+  rama: string | null
+  ahead: number
+  cambios: number
+  sucio_desde: string | null
+  error: string | null
+  ci: 'ok' | 'fallo' | 'en_curso' | null
+}
+
+/** Uso estimado (`≈`) con los tokens locales y `limites`, solo si no hay dato oficial. */
+export type UsoEstimado = { cinco_horas: number | null; semana: number | null; reinicioSemana: number | null }
 
 /** Todo lo que el panel necesita, como datos planos (va a `$.state`). */
 export type DatosPanel = {
@@ -39,6 +49,14 @@ export type DatosPanel = {
   ultimoRefresh: number | null
   /** De /refresh; vacío si aún no se ha hecho ninguno. */
   git: Record<string, GitPanel>
+  usoEstimado: UsoEstimado | null
+}
+
+/** Suma los tokens de las horas desde `desde` (en ms) hasta ahora. */
+export function tokensDesde(horas: ReadonlyMap<string, number>, desdeHora: string): number {
+  let n = 0
+  for (const [h, v] of horas) if (h >= desdeHora) n += v
+  return n
 }
 
 type Entrada<T> = { mtime: number; valor: T }
@@ -137,7 +155,12 @@ export async function leerPanel($: EngineInterface, config: Config, desfase: num
   const rutaTotal = unir(agentos, 'actividad.json')
   const mTotal = await mtimeDe($, rutaTotal)
   const total = mTotal === null ? null : await leerSiCambio($, rutaTotal, mTotal, interpretarActividadTotal)
+  const tokens = new Map<string, number>()
+  const sumarHoras = (h: Record<string, number> | undefined) => {
+    for (const [k, v] of Object.entries(h ?? {})) tokens.set(k, (tokens.get(k) ?? 0) + v)
+  }
   if (total) {
+    sumarHoras(total.tokens)
     turnosTotales += total.total
     for (const d of dias) turnos.set(d, (turnos.get(d) ?? 0) + turnosDelDia(total, d))
   }
@@ -146,6 +169,7 @@ export async function leerPanel($: EngineInterface, config: Config, desfase: num
     if (!f.name.endsWith('.json')) continue
     const a = await leerSiCambio($, unir(dirActividad, f.name), f.mtimeMs, interpretarActividad)
     if (!a) continue
+    sumarHoras(a.tokens)
     for (const [d, n] of Object.entries(a.dias)) {
       turnosTotales += n
       if (turnos.has(d)) turnos.set(d, (turnos.get(d) ?? 0) + n)
@@ -162,6 +186,18 @@ export async function leerPanel($: EngineInterface, config: Config, desfase: num
   const mInst = await mtimeDe($, rutaInst)
   const inst = mInst === null ? null : await leerSiCambio($, rutaInst, mInst, json(v => (typeof (v as Instantanea)?.ms === 'number' ? (v as Instantanea) : null)))
 
+  const usoOficial = usoMasReciente([usoPropio, ...sesiones.map(s => s.uso)])
+  let usoEstimado: UsoEstimado | null = null
+  const { sesion_5h_tokens: lim5, semana_tokens: limSemana, reinicio_semanal } = config.limites
+  if (usoOficial === null && (lim5 !== null || limSemana !== null)) {
+    const reinicio = ultimoReinicio(ahora, desfase, reinicio_semanal)
+    usoEstimado = {
+      cinco_horas: lim5 === null ? null : Math.round((tokensDesde(tokens, horaLocal(ahora - 5 * 3600_000, desfase)) / lim5) * 100),
+      semana: limSemana === null || reinicio === null ? null : Math.round((tokensDesde(tokens, horaLocal(reinicio, desfase)) / limSemana) * 100),
+      reinicioSemana: reinicio === null ? null : reinicio + 7 * 86_400_000,
+    }
+  }
+
   return {
     generado: ahora,
     desfase,
@@ -175,11 +211,12 @@ export async function leerPanel($: EngineInterface, config: Config, desfase: num
     // Sin /refresh todavía no hay commits: n/d.
     dias: dias.map(d => ({ dia: d, turnos: turnos.get(d) ?? 0, commits: git ? (commits.get(d) ?? 0) : null })),
     turnosTotales,
-    uso: usoMasReciente([usoPropio, ...sesiones.map(s => s.uso)]),
+    uso: usoOficial,
     sinClasificar: doc?.sinClasificar.length ?? 0,
     ultimoRefresh: inst?.ms ?? null,
+    usoEstimado,
     git: Object.fromEntries(
-      Object.entries(git?.repos ?? {}).map(([c, r]) => [c, { rama: r.rama, ahead: r.ahead, cambios: r.cambios, sucio_desde: r.sucio_desde, error: r.error }]),
+      Object.entries(git?.repos ?? {}).map(([c, r]) => [c, { rama: r.rama, ahead: r.ahead, cambios: r.cambios, sucio_desde: r.sucio_desde, error: r.error, ci: r.ci ?? null }]),
     ),
   }
 }

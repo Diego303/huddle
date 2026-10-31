@@ -8,7 +8,7 @@
 import type { EngineInterface } from 'claude-code'
 
 import type { ActividadSesion } from './actividad.ts'
-import { actividadVacia, DIAS_GUARDADOS, interpretarActividad, podar, sumarTurno } from './actividad.ts'
+import { actividadVacia, DIAS_GUARDADOS, HORAS_TOKENS, interpretarActividad, podar, sumarTokens, sumarTurno } from './actividad.ts'
 import type { Config } from './config.ts'
 import { estaConfigurada, leerConfig } from './config.ts'
 import type { EstadoSesion, Evento } from './estado.ts'
@@ -19,7 +19,7 @@ import { avisar, plataformaDe } from './notificar.ts'
 import { interpretarProyectos } from './proyectos.ts'
 import { normalizar, padre, unir } from './rutas.ts'
 import { clasificar, gitdirDeFichero, ramaDeHead } from './sesion-proyecto.ts'
-import { desfaseDeTexto, diaLocal, isoLocal, ultimosDias } from './tiempo.ts'
+import { desfaseDeTexto, diaLocal, horaLocal, isoLocal, ultimosDias } from './tiempo.ts'
 
 /** Cuánto se espera para agrupar escrituras. */
 const ESPERA_VOLCADO_MS = 100
@@ -286,6 +286,23 @@ export function contarTurno($: EngineInterface): void {
     const ms = Date.now()
     const desde = ultimosDias(ms, ctx.desfase, DIAS_GUARDADOS)[0] ?? ''
     ctx.actividad = podar(sumarTurno(ctx.actividad, diaLocal(ms, ctx.desfase)), desde)
+    ctx.actividadSucia = true
+    programar($)
+  } catch {
+    // nunca rompe la sesión
+  }
+}
+
+/**
+ * Los tokens de un turno (también de subagentes), por hora: solo sirven para
+ * estimar el uso con `≈` cuando Claude Code no da el dato oficial.
+ */
+export function contarTokens($: EngineInterface, usage: { input_tokens: number; output_tokens: number; cache_creation_input_tokens: number } | undefined): void {
+  try {
+    if (!ctx.activo || ctx.actividad === null || ctx.cerrada || usage === undefined) return
+    const n = usage.input_tokens + usage.output_tokens + usage.cache_creation_input_tokens
+    const ms = Date.now()
+    ctx.actividad = sumarTokens(ctx.actividad, horaLocal(ms, ctx.desfase), n, horaLocal(ms - HORAS_TOKENS * 3600_000, ctx.desfase))
     ctx.actividadSucia = true
     programar($)
   } catch {

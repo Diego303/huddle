@@ -35,7 +35,7 @@ const SESIONES = [
 function datos(sesiones = SESIONES): DatosPanel {
   return {
     generado: AHORA, desfase: 60, general_dir: '/g', raiz: '/r', inactiva_min: 30, sesiones, fichas: [], hoy: null, siguiente: [],
-    dias: [], turnosTotales: 0, uso: null, sinClasificar: 0, ultimoRefresh: null, git: {},
+    dias: [], turnosTotales: 0, uso: null, sinClasificar: 0, ultimoRefresh: null, git: {}, usoEstimado: null,
   }
 }
 

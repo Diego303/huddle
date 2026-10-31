@@ -219,7 +219,26 @@ export function bocadillo(estado: EstadoRex, vistas: readonly SesionVista[], fic
 
 export type Alerta = { texto: string; nivel: 'aviso' | 'grave' }
 
-/** Las alertas que no dependen de git (las de git llegan con /refresh). */
+/** Lo que las alertas usan de git (de /refresh). */
+export type GitAlerta = { ahead: number; cambios: number; sucio_desde: string | null; ci?: 'ok' | 'fallo' | 'en_curso' | null }
+
+const TRES_DIAS = 3 * 86_400_000
+
+/** Las de git: commits sin push, cambios sin commitear hace más de 3 días y CI en rojo. */
+export function alertasGit(git: Readonly<Record<string, GitAlerta>>, ahora: number): Alerta[] {
+  const a: Alerta[] = []
+  for (const [p, r] of Object.entries(git)) {
+    if (r.ci === 'fallo') a.push({ texto: `${p}: CI en rojo`, nivel: 'grave' })
+    if (r.ahead > 0) a.push({ texto: `${p}: ${r.ahead} commit${r.ahead === 1 ? '' : 's'} sin push`, nivel: 'aviso' })
+    const desde = r.sucio_desde ? Date.parse(r.sucio_desde) : Number.NaN
+    if (r.cambios > 0 && Number.isFinite(desde) && ahora - desde > TRES_DIAS) {
+      a.push({ texto: `${p}: cambios sin commitear desde hace ${Math.floor((ahora - desde) / 86_400_000)} días`, nivel: 'aviso' })
+    }
+  }
+  return a
+}
+
+/** Las alertas que no dependen de git. */
 export function alertasBasicas(vistas: readonly SesionVista[], sinClasificar: number): Alerta[] {
   const a: Alerta[] = []
   for (const v of vistas) {
@@ -232,12 +251,16 @@ export function alertasBasicas(vistas: readonly SesionVista[], sinClasificar: nu
   return a
 }
 
-/** Siguiente acción por reglas si ESTADO.md no tiene: lo que espera, luego el contexto alto. */
-export function accionesPorReglas(vistas: readonly SesionVista[]): string[] {
+/**
+ * Siguiente acción por reglas si ESTADO.md no tiene (§2.5): primero las
+ * sesiones que te esperan, luego las de contexto alto y después los commits sin push.
+ */
+export function accionesPorReglas(vistas: readonly SesionVista[], git: Readonly<Record<string, GitAlerta>> = {}): string[] {
   const r: string[] = []
   for (const v of vistas) if (v.estado === 'te_espera') r.push(`Atender ${v.etiqueta}: ${v.s.detalle}`)
   for (const v of vistas) {
     if (v.estado !== 'inactiva' && (v.s.contexto_pct ?? 0) >= 80) r.push(`Compactar ${v.etiqueta} (${v.s.contexto_pct} %)`)
   }
+  for (const [p, g] of Object.entries(git)) if (g.ahead > 0) r.push(`Push en ${p} (${g.ahead} commit${g.ahead === 1 ? '' : 's'} sin subir)`)
   return r.slice(0, 3)
 }

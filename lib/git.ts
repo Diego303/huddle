@@ -23,6 +23,8 @@ export type DatosRepo = {
   /** Momento (ms) de cada commit de los últimos 8 días, para «desde la última vez». */
   commits_ts: number[]
   error: string | null
+  /** Último run de CI de la rama, con `gh` (si está instalado y el repo tiene remoto). */
+  ci?: 'ok' | 'fallo' | 'en_curso' | null
 }
 
 export type GitCache = { generado: string; repos: Record<string, DatosRepo> }
@@ -136,4 +138,44 @@ export async function recogerTodos(
     repos[c] = datos[i]!
   })
   return { generado: ahoraIso, repos }
+}
+
+/** `gh run list --json status,conclusion`: el estado del último run. */
+export function interpretarCi(salida: string): 'ok' | 'fallo' | 'en_curso' | null {
+  try {
+    const [run] = JSON.parse(salida) as { status?: string; conclusion?: string }[]
+    if (!run) return null
+    if (run.status !== 'completed') return 'en_curso'
+    if (run.conclusion === 'success' || run.conclusion === 'skipped' || run.conclusion === 'neutral') return 'ok'
+    return 'fallo'
+  } catch {
+    return null
+  }
+}
+
+/**
+ * El CI de cada repo con upstream, solo si `gh` está instalado (si no, se
+ * queda sin dato y no hay alerta). En paralelo, con un tope de 10 s por repo.
+ */
+export async function estadoCi($: EngineInterface, raiz: string, cache: GitCache): Promise<boolean> {
+  try {
+    if ((await $.process.run(['gh', '--version'], { timeoutMs: 3000 })).exitCode !== 0) return false
+  } catch {
+    return false
+  }
+  await Promise.all(
+    Object.entries(cache.repos).map(async ([carpeta, r]) => {
+      if (r.error !== null || r.upstream === null || r.rama === null) return
+      try {
+        const res = await $.process.run(['gh', 'run', 'list', '--limit', '1', '--branch', r.rama, '--json', 'status,conclusion'], {
+          cwd: unir(raiz, carpeta),
+          timeoutMs: 10_000,
+        })
+        r.ci = res.exitCode === 0 ? interpretarCi(res.stdout) : null
+      } catch {
+        r.ci = null
+      }
+    }),
+  )
+  return true
 }

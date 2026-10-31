@@ -255,3 +255,16 @@ huddle/
 - **`/proyecto <nombre> [tests]`:** la ficha, `git status` y los 10 últimos commits, y las sesiones del proyecto. Con `tests`, Claude los ejecuta sin modificar nada.
 - **`/cierre`:** apunta los números del día (turnos, commits y «Hoy») en el registro, desmarca «Hoy» y le pide a Claude el resumen y los «Próximos pasos» de las fichas de los proyectos tocados hoy, que salen de los turnos y commits de hoy.
 - **`/registro "<texto>"`:** añade `- AAAA-MM-DD HH:MM · texto` al diario del mes (lo crea con su título si no existe).
+
+## 10. Decisiones de la Fase 6
+
+- **Uso, de mejor a peor dato:**
+  1. El oficial, de `$.session.usage().rateLimits`, de la torre o el más reciente que haya guardado alguna sesión.
+  2. Sin dato oficial pero con `limites` en la config, una **estimación marcada con `≈`**: cada sesión suma los tokens de cada turno (`input + output + cache_creation`, también de subagentes) en franjas de una hora dentro de su fichero de actividad. El panel suma las últimas 5 h (con franjas de una hora, la ventana es aproximada) y lo que va de semana desde el último `reinicio_semanal` (por ejemplo `jue 09:00`, hora local).
+  3. Si no hay ni lo uno ni lo otro, `n/d · configúralo en config.json`.
+
+  Nunca se muestra un porcentaje sin su origen.
+- **Alertas (§3.1):** primero las graves (contexto ≥ 80 % y CI en rojo), después los avisos (sesión esperando más de 5 min, commits sin push, cambios sin commitear desde hace más de 3 días) y al final las carpetas sin clasificar. Se ven 5 como mucho, más «… y N más».
+- **CI:** `/refresh` lo consulta solo si `gh` está instalado (`gh --version`) y el repo tiene upstream, con `gh run list --limit 1 --branch <rama> --json status,conclusion`, en paralelo y con 10 s de tope por repo. En esta máquina `gh` no está instalado, así que no hay dato ni alerta; lo cubren los tests.
+- **Siguiente acción por reglas (§2.5):** primero las sesiones que te esperan, luego las de contexto alto y después los commits sin push. Como mucho 3, y solo si `ESTADO.md` no tiene las suyas.
+- **Prueba real:** con un remoto local y un commit sin subir en `struo`, `/refresh` detectó «1 commit nuevo», y el panel mostró «▲ struo: 1 commit sin push», la regla «Push en struo» y la barra de commits del día.

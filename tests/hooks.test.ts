@@ -140,6 +140,9 @@ describe('hooks de estado', () => {
       },
     })
     expect(JSON.stringify(leerEstado(s))).not.toContain('privado')
+    // Los tokens del turno van, por hora, a su fichero de actividad (para el ≈ sin dato oficial).
+    const act = JSON.parse(s.ficheros.get(`${GENERAL}/.agentos/actividad/sesion-1.json`) ?? '{}')
+    expect(Object.values(act.tokens ?? {})).toEqual([2])
   })
 
   test('un subagente en segundo plano vive hasta SubagentStop, no hasta su PostToolUse', async ($, on) => {

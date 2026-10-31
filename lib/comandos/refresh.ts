@@ -5,7 +5,7 @@
 import type { EngineInterface } from 'claude-code'
 
 import type { ActividadTotal } from '../actividad.ts'
-import { actividadTotalVacia, DIAS_GUARDADOS, interpretarActividad, interpretarActividadTotal, juntar } from '../actividad.ts'
+import { actividadTotalVacia, DIAS_GUARDADOS, HORAS_TOKENS, interpretarActividad, interpretarActividadTotal, juntar } from '../actividad.ts'
 import type { Config } from '../config.ts'
 import { estaConfigurada, leerConfig } from '../config.ts'
 import type { EstadoSesion } from '../estado.ts'
@@ -13,14 +13,14 @@ import type { Instantanea } from '../estado-md.ts'
 import { anadirARegistro, desdeLaUltimaVez, generarEstado, lineaRegistro, tablaProyectos } from '../estado-md.ts'
 import { borrar, escribirAtomico, esDirectorio, leerTexto } from '../ficheros.ts'
 import type { GitCache } from '../git.ts'
-import { recogerTodos } from '../git.ts'
+import { estadoCi, recogerTodos } from '../git.ts'
 import type { Ficha } from '../panel-datos.ts'
 import { accionesPorReglas, interpretarFicha, porcentaje, vistaSesiones } from '../panel-datos.ts'
 import { interpretarProyectos } from '../proyectos.ts'
 import { encolarPrompt } from '../encolar.ts'
 import { unir } from '../rutas.ts'
 import { desfaseActual } from '../sesion.ts'
-import { isoLocal, ultimosDias } from '../tiempo.ts'
+import { horaLocal, isoLocal, ultimosDias } from '../tiempo.ts'
 
 const CADUCA_MS = 24 * 3600_000
 
@@ -60,7 +60,7 @@ export async function limpiarEstados($: EngineInterface, dir: string, ahora: num
 }
 
 /** Junta en actividad.json los turnos de las sesiones que ya no están vivas. */
-export async function compactarActividad($: EngineInterface, agentos: string, vivas: readonly string[], desde: string): Promise<ActividadTotal> {
+export async function compactarActividad($: EngineInterface, agentos: string, vivas: readonly string[], desde: string, desdeHora = ''): Promise<ActividadTotal> {
   const rutaTotal = unir(agentos, 'actividad.json')
   let total = interpretarActividadTotal((await leerTexto($, rutaTotal)) ?? '') ?? actividadTotalVacia()
   const dir = unir(agentos, 'actividad')
@@ -69,7 +69,7 @@ export async function compactarActividad($: EngineInterface, agentos: string, vi
     const id = nombre.replace(/\.json$/, '')
     if (vivas.includes(id)) continue
     const a = interpretarActividad((await leerTexto($, unir(dir, nombre))) ?? '')
-    if (a) total = juntar(total, a, desde)
+    if (a) total = juntar(total, a, desde, desdeHora)
     juntadas.push(nombre)
   }
   if (juntadas.length > 0) {
@@ -98,7 +98,7 @@ export async function hacerRefresh($: EngineInterface, config: Config, redactar:
 
   const { vivas, borradas } = await limpiarEstados($, unir(agentos, 'estado'), t0)
   const desde = ultimosDias(t0, desfase, DIAS_GUARDADOS)[0] ?? ''
-  await compactarActividad($, agentos, vivas.map(s => s.session_id), desde)
+  await compactarActividad($, agentos, vivas.map(s => s.session_id), desde, horaLocal(t0 - HORAS_TOKENS * 3600_000, desfase))
 
   const textoProyectos = await leerTexto($, unir(config.general_dir, 'PROYECTOS.md'))
   if (textoProyectos === undefined) throw new Error('no encuentro PROYECTOS.md: ejecuta /configurar')
@@ -109,6 +109,7 @@ export async function hacerRefresh($: EngineInterface, config: Config, redactar:
   const rutaGit = unir(agentos, 'git-cache.json')
   const previaGit = leerJson(await leerTexto($, rutaGit), v => (v as GitCache)?.repos ? (v as GitCache) : null)
   const git = await recogerTodos($, config.raiz_proyectos, seguimiento, previaGit, t0, fecha, desfase)
+  await estadoCi($, config.raiz_proyectos, git)
   await escribirAtomico($, rutaGit, `${JSON.stringify(git)}\n`)
 
   const fichas: Ficha[] = []

@@ -19,6 +19,7 @@ import {
   arrancarSesion,
   cambiarDirectorio,
   cerrarSesion,
+  contarTokens,
   contarTurno,
   pedirUso,
   registrar,
@@ -120,6 +121,7 @@ export const register: Register = on => {
   }).catch(($, e, next) => next(e))
 
   on('turn.complete', ($, e, next) => {
+    contarTokens($, e.usage)
     if (e.agentId === undefined) {
       registrar($, { tipo: 'turno_fin' })
       if (e.usage?.model) registrar($, { tipo: 'modelo', modelo: e.usage.model })

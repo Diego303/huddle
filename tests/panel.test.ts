@@ -64,6 +64,7 @@ function datos(cambios: Partial<DatosPanel> = {}): DatosPanel {
     sinClasificar: 1,
     ultimoRefresh: null,
     git: {},
+    usoEstimado: null,
     ...cambios,
   }
 }

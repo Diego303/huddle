@@ -7,6 +7,7 @@ import type { FichaPanel, SesionVista } from '../lib/panel-datos.ts'
 import {
   accionesPorReglas,
   alertasBasicas,
+  alertasGit,
   bocadillo,
   contadores,
   estadoRex,
@@ -203,10 +204,18 @@ function contexto(vistas: SesionVista[], w: number): Linea[] {
   return out
 }
 
-function alertas(vistas: SesionVista[], d: DatosPanel): Linea[] {
-  const lista = alertasBasicas(vistas, d.sinClasificar)
+function listaAlertas(vistas: SesionVista[], d: DatosPanel, ahora: number) {
+  const todas = [...alertasBasicas(vistas, d.sinClasificar), ...alertasGit(d.git ?? {}, ahora)]
+  // Las graves primero; «sin clasificar» al final.
+  const peso = (a: { nivel: string; texto: string }) => (a.texto.includes('sin clasificar') ? 2 : a.nivel === 'grave' ? 0 : 1)
+  return todas.sort((a, b) => peso(a) - peso(b))
+}
+
+function alertas(vistas: SesionVista[], d: DatosPanel, ahora: number): Linea[] {
+  const lista = listaAlertas(vistas, d, ahora)
   if (lista.length === 0) return [titulo('Alertas'), [s('  ninguna', { c: COLOR.gris })]]
-  return [titulo('Alertas'), ...lista.slice(0, 5).map(a => [s('▲ ', { c: a.nivel === 'grave' ? COLOR.rojo : COLOR.ambar }), s(a.texto)])]
+  const mas = lista.length > 5 ? [[s(`  … y ${lista.length - 5} más`, { c: COLOR.gris })]] : []
+  return [titulo('Alertas'), ...lista.slice(0, 5).map(a => [s('▲ ', { c: a.nivel === 'grave' ? COLOR.rojo : COLOR.ambar }), s(a.texto)]), ...mas]
 }
 
 function actividad(d: DatosPanel): Linea[] {
@@ -227,7 +236,7 @@ function actividad(d: DatosPanel): Linea[] {
 }
 
 function siguiente(vistas: SesionVista[], d: DatosPanel): Linea[] {
-  const acciones = d.siguiente.length > 0 ? d.siguiente : accionesPorReglas(vistas)
+  const acciones = d.siguiente.length > 0 ? d.siguiente : accionesPorReglas(vistas, d.git ?? {})
   const out: Linea[] = [titulo('Siguiente acción', d.siguiente.length === 0 && acciones.length > 0 ? [s('  (por reglas)', { c: COLOR.gris })] : [])]
   if (acciones.length === 0) out.push([s('  nada pendiente · /refresh para que Claude proponga', { c: COLOR.gris })])
   acciones.forEach((a, i) => out.push([s(`${i + 1}. `, { c: COLOR.gris }), s(a)]))
@@ -240,8 +249,17 @@ function uso(d: DatosPanel, ahora: number, w: number): Linea[] {
     v
       ? [s(`${nombre} `), ...barra(v.pct, 10, v.pct >= 80 ? COLOR.rojo : v.pct >= 60 ? COLOR.ambar : COLOR.azul), s(` ${Math.round(v.pct)}%`, { b: true }), s(` · ${reinicio(v.reinicia, ahora, d.desfase)}`, { c: COLOR.gris })]
       : [s(`${nombre} `), s('n/d · configúralo en config.json', { c: COLOR.gris })]
-  const a = ventana('Sesión 5 h', u?.cinco_horas)
-  const b = ventana('Semana', u?.semana)
+  const e = d.usoEstimado ?? null
+  // Sin dato oficial pero con límites en la config: estimación con ≈.
+  const estimada = (nombre: string, pct: number | null, reinicia: string): Linea =>
+    pct === null
+      ? [s(`${nombre} `), s('n/d · configúralo en config.json', { c: COLOR.gris })]
+      : [s(`${nombre} `), ...barra(Math.min(100, pct), 10, pct >= 80 ? COLOR.rojo : pct >= 60 ? COLOR.ambar : COLOR.azul), s(` ≈${pct}%`, { b: true }), s(` · ${reinicia}`, { c: COLOR.gris })]
+  const a = u === null && e ? estimada('Sesión 5 h', e.cinco_horas, 'ventana móvil de 5 h') : ventana('Sesión 5 h', u?.cinco_horas)
+  const b =
+    u === null && e
+      ? estimada('Semana', e.semana, e.reinicioSemana === null ? 'reinicio n/d' : reinicio(new Date(e.reinicioSemana).toISOString(), ahora, d.desfase))
+      : ventana('Semana', u?.semana)
   return w >= 96 ? [extremos(a, b, w)] : [a, b]
 }
 
@@ -279,14 +297,14 @@ export function componerPanel(d: DatosPanel | null, w: number, h: number, n: num
     11 + // Rex
     1 + Math.max(1, fichas.length) +
     1 + Math.max(1, vistas.filter(v => v.estado !== 'inactiva').length) +
-    1 + Math.max(1, Math.min(5, alertasBasicas(vistas, d.sinClasificar).length)) +
+    1 + Math.max(1, Math.min(6, listaAlertas(vistas, d, ahora).length)) +
     3 + 4 + 2 + 1 + 6 // actividad, siguiente, uso, pie, separaciones
   const maxSesiones = Math.max(3, h - fijas)
   const lineas = (l: Linea[]): Bloque => ({ tipo: 'lineas', lineas: l.map(x => ajustar(x, ancho)) })
   return [
     lineas([cabecera(d, ahora, ancho), ...lineaContadores(vistas, d, ancho)]),
     bloqueRex(vistas, fichas, d, n, Math.max(10, ancho - ANCHO_REX - 2)),
-    lineas([...ejecutandose(vistas, n, ancho, maxSesiones), [], ...progreso(fichas, ancho), [], ...contexto(vistas, ancho), [], ...alertas(vistas, d), [], ...actividad(d), [], ...siguiente(vistas, d), regla(ancho), ...uso(d, ahora, ancho), pie(d, ancho)]),
+    lineas([...ejecutandose(vistas, n, ancho, maxSesiones), [], ...progreso(fichas, ancho), [], ...contexto(vistas, ancho), [], ...alertas(vistas, d, ahora), [], ...actividad(d), [], ...siguiente(vistas, d), regla(ancho), ...uso(d, ahora, ancho), pie(d, ancho)]),
   ]
 }
 
@@ -307,7 +325,7 @@ function panelAncho(d: DatosPanel, vistas: SesionVista[], fichas: FichaPanel[], 
     lineas([
       ...bloqueRexTexto(vistas, fichas, d),
       regla(w),
-      ...columnas(progreso(fichas, izq), [...contexto(vistas, der), ...alertas(vistas, d)], izq, der),
+      ...columnas(progreso(fichas, izq), [...contexto(vistas, der), ...alertas(vistas, d, ahora)], izq, der),
       regla(w),
       ...columnas(actividad(d), siguiente(vistas, d), izq, der),
       regla(w),
