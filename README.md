@@ -146,6 +146,7 @@ cd /mnt/d/GitHub/GENERAL && claude
 | `/refresh` | Actualiza git y `ESTADO.md` y te cuenta qué ha pasado desde la última vez. Después Claude redacta el resumen y la siguiente acción (`/refresh solo-datos` lo omite) |
 | `/panel` · `/oficina [sesiones\|agentes]` | Cambia entre el panel y la oficina |
 | `/huddle web` | Abre la vista web en el navegador; se actualiza sola, sin recargar |
+| `/huddle ignorar <id>` | Deja de mostrar un atasco hasta que esa sesión cambie de tarea (lo copia el botón «ignorar» de la web) |
 | `/proyecto <nombre> [tests]` | Detalle de un proyecto: ficha, git y sesiones. Con `tests`, Claude ejecuta sus tests sin cambiar nada |
 | `/preguntar <proyecto> "<pregunta>"` | Pregunta a la sesión de un proyecto, en solo lectura |
 | `/fichas [proyecto]` | Claude rellena lo que falta en las fichas (fase, estado, tareas y próximos pasos), en solo lectura y en segundo plano |
@@ -187,6 +188,15 @@ Los personajes son tus sesiones (y, en modo agentes, también sus subagentes), y
 
 Cuando un subagente cambia de actividad (otra herramienta u otro fichero), va a la estantería de su sala, o baja al archivo en ascensor, y vuelve. Si no cambia nada, se queda en su puesto: no hay movimientos inventados. Al pasar el ratón ves quién es y qué hace; con un clic, su detalle, el mismo que al hacer clic en una fila de «Ejecutándose ahora» en el Panel. La escena, el modo y las etiquetas se recuerdan para la próxima vez. La animación se para cuando la pestaña no está a la vista o no estás en esas escenas.
 
+**Pestaña Actividad.** Cuatro bloques, con lo que han hecho tus sesiones:
+
+- **Atascos:** sesiones que parecen en bucle, en rojo también en la Oficina. Hay tres reglas: el mismo comando falla 3 veces seguidas con el mismo error; el mismo fichero se edita 5 veces en 30 minutos sin que pasen los tests; o 20 minutos trabajando sin tests en verde, ficheros nuevos ni commits. Cada tarjeta dice la regla, la prueba (el comando y su error, o cómo van los tests), desde cuándo y una pista. «/abrir» copia el comando para abrir el proyecto; «ignorar» la esconde y copia `/huddle ignorar <id>`, que, pegado en la carpeta de control, la ignora hasta que le des otra tarea a esa sesión. Cada atasco avisa una sola vez, por la misma vía que «te espera», y se va solo en cuanto hay avance (tests en verde, un comando que funciona o un commit). Si no hay ninguno: «Todo fluye · ninguna sesión atascada».
+- **Cronograma de hoy:** una barra por sesión con sus tramos de trabajo, espera, pausa y atasco, desde la primera actividad (o las 9:00) hasta ahora. Arriba, cuánto te han esperado hoy, la media y la espera más larga. Al hacer clic en una sesión, su bitácora.
+- **Bitácora:** lo que ha hecho cada sesión (ediciones con `+n −m`, comandos con su resultado, subagentes, permisos y preguntas), de lo más reciente a lo más antiguo, con un buscador sobre los últimos 7 días.
+- **Uso por proyecto:** qué parte del uso de 5 h y del semanal se lleva cada proyecto, con una nota: quién gasta más y por qué, y en la semana, cómo llegas al reinicio a este ritmo.
+
+Los umbrales de los atascos se cambian en `config.json → atascos`.
+
 ## La carpeta de control
 
 ```
@@ -222,9 +232,9 @@ Los hooks del mod se ejecutan en cada sesión de Claude Code y anotan su estado 
 
 El contexto de cada sesión y el uso de 5 h y semanal son los datos oficiales de Claude Code, los mismos de la status line. Si no los hay, por ejemplo sin suscripción, el panel muestra `n/d`, o una estimación marcada con `≈` si configuras `limites`.
 
-**Privacidad:** no se guarda el texto de tus prompts ni de las respuestas. De cada herramienta solo se anota la ruta del fichero, la descripción del subagente o, en Bash, el nombre del programa. Todo se queda en tu máquina.
+**Privacidad:** no se guarda el texto de tus prompts ni de las respuestas. En el estado de cada sesión solo se anota la ruta del fichero, la descripción del subagente o, en Bash, el nombre del programa. La bitácora de la pestaña Actividad guarda además el comando de Bash, con los secretos enmascarados (`TOKEN=***`, `--password ***`, `Authorization: ***` y las cadenas que parecen claves), y la primera línea de su error. Se borra a los 7 días. Todo se queda en tu máquina.
 
-**Qué lee de tus proyectos:** solo los metadatos de git (rama, cambios pendientes, commits recientes) y, una sola vez, las primeras 40 líneas del README para crear la ficha del proyecto. No lee tu código salvo que se lo pidas con `/proyecto`, `/preguntar` o `/fichas`.
+**Qué lee de tus proyectos:** solo los metadatos de git (rama, cambios pendientes, commits recientes) y, una sola vez, las primeras 40 líneas del README para crear la ficha del proyecto. No lee tu código salvo que se lo pidas con `/proyecto`, `/preguntar` o `/fichas`. Para el uso por proyecto, cada sesión suma los tokens de su propio transcript de Claude Code (y del de sus subagentes): solo las cifras de uso, nunca los mensajes.
 
 **`/preguntar` en solo lectura:** si la sesión del proyecto está en pausa o inactiva, se retoma en una bifurcación (`--fork-session`) que no se guarda; si está trabajando o no hay ninguna, se lanza un `claude -p` nuevo en el repo. En los dos casos solo puede leer ficheros y ejecutar `git log/status/diff/show`, `ls`, `grep`, `rg`, `cat`, `head` y `wc`.
 
@@ -268,6 +278,9 @@ La estructura del código y las decisiones técnicas están en [`docs/notas-tecn
 | `limites.reinicio_semanal` | `"jue 09:00"` | Cuándo empieza la semana para esa estimación |
 | `inactiva_min` | `30` | Minutos sin actividad para considerar una sesión inactiva |
 | `rex.estacional` | `true` | El disfraz de Rex: calabaza el 31 de octubre, gorro en diciembre |
+| `atascos.comando_repeticiones` | `3` | Fallos seguidos del mismo comando, con el mismo error, para darlo por atascado |
+| `atascos.fichero_ediciones` · `atascos.fichero_minutos` | `5` · `30` | Ediciones del mismo fichero en esos minutos, sin tests en verde |
+| `atascos.sin_progreso_minutos` | `20` | Minutos trabajando sin tests en verde, ficheros nuevos ni commits |
 
 ## Desinstalar
 

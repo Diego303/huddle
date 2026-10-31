@@ -55,6 +55,9 @@ export function datos(cambios: Partial<DatosPanel> = {}): DatosPanel {
     rex_estacional: true,
     seguimiento: ['struo', 'proyecto-b', 'proyecto-c'],
     enSeguimiento: 3,
+    tokensProyecto: {},
+    ignorados: [],
+    limites: { sesion_5h_tokens: null, semana_tokens: null, reinicio_semanal: 'jue 09:00' },
     ...cambios,
   }
 }

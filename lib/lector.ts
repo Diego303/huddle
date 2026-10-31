@@ -6,6 +6,8 @@
 import type { EngineInterface } from 'claude-code'
 
 import { interpretarActividad, interpretarActividadTotal, turnosDelDia } from './actividad.ts'
+import type { Ignorado } from './atascos.ts'
+import { interpretarIgnorados } from './atascos.ts'
 import type { Config } from './config.ts'
 import type { EstadoSesion, Uso } from './estado.ts'
 import type { Instantanea } from './estado-md.ts'
@@ -54,6 +56,12 @@ export type DatosPanel = {
   /** Los proyectos de «Hacer seguimiento», en el orden de PROYECTOS.md (tengan ficha o no). */
   seguimiento: string[]
   enSeguimiento: number
+  /** Tokens de los transcripts por proyecto y hora (de todas las sesiones, vivas y cerradas). */
+  tokensProyecto: Record<string, Record<string, number>>
+  /** Atascos que ignoraste desde la web (con /huddle ignorar). */
+  ignorados: Ignorado[]
+  /** Los límites de config.json, para el uso por proyecto sin dato oficial (≈). */
+  limites: Config['limites']
 }
 
 /** Suma los tokens de las horas desde `desde` (en ms) hasta ahora. */
@@ -160,11 +168,21 @@ export async function leerPanel($: EngineInterface, config: Config, desfase: num
   const mTotal = await mtimeDe($, rutaTotal)
   const total = mTotal === null ? null : await leerSiCambio($, rutaTotal, mTotal, interpretarActividadTotal)
   const tokens = new Map<string, number>()
-  const sumarHoras = (h: Record<string, number> | undefined) => {
-    for (const [k, v] of Object.entries(h ?? {})) tokens.set(k, (tokens.get(k) ?? 0) + v)
+  const tokensProyecto: Record<string, Record<string, number>> = {}
+  const sumarHoras = (h: Record<string, number> | undefined, proyecto?: string) => {
+    for (const [k, v] of Object.entries(h ?? {})) {
+      tokens.set(k, (tokens.get(k) ?? 0) + v)
+      if (proyecto === undefined) continue
+      const p = (tokensProyecto[proyecto] ??= {})
+      p[k] = (p[k] ?? 0) + v
+    }
   }
   if (total) {
     sumarHoras(total.tokens)
+    for (const [p, hs] of Object.entries(total.tokensProyecto ?? {})) {
+      const destino = (tokensProyecto[p] ??= {})
+      for (const [h, n] of Object.entries(hs)) destino[h] = (destino[h] ?? 0) + n
+    }
     turnosTotales += total.total
     for (const d of dias) turnos.set(d, (turnos.get(d) ?? 0) + turnosDelDia(total, d))
   }
@@ -173,7 +191,7 @@ export async function leerPanel($: EngineInterface, config: Config, desfase: num
     if (!f.name.endsWith('.json')) continue
     const a = await leerSiCambio($, unir(dirActividad, f.name), f.mtimeMs, interpretarActividad)
     if (!a) continue
-    sumarHoras(a.tokens)
+    sumarHoras(a.tokens, a.proyecto)
     for (const [d, n] of Object.entries(a.dias)) {
       turnosTotales += n
       if (turnos.has(d)) turnos.set(d, (turnos.get(d) ?? 0) + n)
@@ -189,6 +207,10 @@ export async function leerPanel($: EngineInterface, config: Config, desfase: num
   const rutaInst = unir(agentos, 'ultimo-refresh.json')
   const mInst = await mtimeDe($, rutaInst)
   const inst = mInst === null ? null : await leerSiCambio($, rutaInst, mInst, json(v => (typeof (v as Instantanea)?.ms === 'number' ? (v as Instantanea) : null)))
+
+  const rutaIgnorados = unir(agentos, 'atascos-ignorados.json')
+  const mIgn = await mtimeDe($, rutaIgnorados)
+  const ignorados = mIgn === null ? [] : ((await leerSiCambio($, rutaIgnorados, mIgn, t => interpretarIgnorados(t))) ?? [])
 
   const usoOficial = usoMasReciente([usoPropio, ...sesiones.map(s => s.uso)])
   let usoEstimado: UsoEstimado | null = null
@@ -222,6 +244,9 @@ export async function leerPanel($: EngineInterface, config: Config, desfase: num
     rex_estacional: config.rex.estacional,
     seguimiento: (doc?.seguimiento ?? []).map(e => e.carpeta),
     enSeguimiento: doc?.seguimiento.length ?? 0,
+    tokensProyecto,
+    ignorados,
+    limites: config.limites,
     git: Object.fromEntries(
       Object.entries(git?.repos ?? {}).map(([c, r]) => [c, { rama: r.rama, ahead: r.ahead, cambios: r.cambios, sucio_desde: r.sucio_desde, error: r.error, ci: r.ci ?? null }]),
     ),

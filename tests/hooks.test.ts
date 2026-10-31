@@ -18,6 +18,12 @@ const WT = `${RAIZ}/struo-wt/feat-x`
 const CONFIG = '/home/usuario/.config/huddle/config.json'
 const ESTADO = `${GENERAL}/.agentos/estado`
 
+/** Un transcript: un mensaje en dos bloques (mismo id, mismo usage) y otro; el segundo sin terminar de escribir. */
+const uso = (id: string, n: number, ts = '2026-10-31T00:00:05Z') =>
+  `${JSON.stringify({ type: 'assistant', timestamp: ts, message: { id, usage: { input_tokens: n, output_tokens: 0, cache_read_input_tokens: 999, cache_creation_input_tokens: 0 } } })}\n`
+const COMPLETO = `${uso('m1', 2)}${uso('m1', 2)}${JSON.stringify({ type: 'user', message: { content: 'secreto' } })}\n${uso('m2', 30)}`
+const TRANSCRIPT = `${COMPLETO}{"type":"assistant","timestamp":"2026-10-31T00:00:09Z","message":{"id":"m3","usa`
+
 function escenario(cwd = WT): SistemaFalso {
   const s = crearSistema({
     cwd,
@@ -29,6 +35,7 @@ function escenario(cwd = WT): SistemaFalso {
       [`${REPO}/.git/HEAD`]: 'ref: refs/heads/main\n',
       [`${WT}/.git`]: `gitdir: ${REPO}/.git/worktrees/feat-x\n`,
       [`${REPO}/.git/worktrees/feat-x/HEAD`]: 'ref: refs/heads/feat-x\n',
+      '/t/x.jsonl': TRANSCRIPT,
     },
   })
   s.sesion.repo = REPO
@@ -140,9 +147,10 @@ describe('hooks de estado', () => {
       },
     })
     expect(JSON.stringify(leerEstado(s))).not.toContain('privado')
-    // Los tokens del turno van, por hora, a su fichero de actividad (para el ≈ sin dato oficial).
+    // Los tokens salen del transcript: por hora, sin contar dos veces un mensaje de varios bloques.
     const act = JSON.parse(s.ficheros.get(`${GENERAL}/.agentos/actividad/sesion-1.json`) ?? '{}')
-    expect(Object.values(act.tokens ?? {})).toEqual([2])
+    expect(Object.values(act.tokens ?? {})).toEqual([2 + 30])
+    expect(act.transcripts['/t/x.jsonl'].offset).toBe(COMPLETO.length)
   })
 
   test('un subagente en segundo plano vive hasta SubagentStop, no hasta su PostToolUse', async ($, on) => {
@@ -197,7 +205,7 @@ describe('hooks de estado', () => {
     await $.prompt.submit({ text: 'otra', wait: false, origin: { kind: 'composer' } } as never)
     await reloj.advance(200)
     const act = JSON.parse(s.ficheros.get(`${GENERAL}/.agentos/actividad/sesion-1.json`) ?? '{}')
-    expect(act).toEqual({ session_id: 'sesion-1', proyecto: 'struo', dias: { [diaLocal(Date.now(), 60)]: 2 } })
+    expect(act).toMatchObject({ session_id: 'sesion-1', proyecto: 'struo', dias: { [diaLocal(Date.now(), 60)]: 2 } })
     expect(s.ficheros.get(`${GENERAL}/.agentos/actividad/sesion-1.json`)).not.toContain('hola')
   })
 

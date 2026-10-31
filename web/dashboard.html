@@ -85,14 +85,32 @@ dialog.detalle::backdrop{background:rgba(0,0,0,.28)}
 .det td{padding:4px 0;vertical-align:top;border-top:.5px solid var(--border)}
 .det td:first-child{color:var(--text-secondary);width:104px;padding-right:8px}
 .det td:last-child{overflow-wrap:anywhere}
+#v-actividad .g-dos{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr)}
+.g-atascos{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.stk{border:.5px solid #F09595;background:var(--surface-2);border-radius:8px;padding:9px 11px;border-left:3px solid #E24B4A;min-width:0}
+code{font-family:var(--font-mono);background:var(--surface-1);border:.5px solid var(--border);border-radius:4px;padding:1px 5px;font-size:11px}
+.chip{font-size:11px;padding:2px 10px;border-radius:999px;border:.5px solid var(--border-strong);cursor:pointer;background:transparent;color:var(--text-primary)}
+.chip.on{background:#D85A30;border-color:#D85A30;color:#fff}
+.ev{display:grid;grid-template-columns:62px 18px minmax(0,1fr);gap:6px;padding:3px 0;font-size:11.5px}
+.ev>span:last-child{overflow-wrap:anywhere}
+.ic{text-align:center;border-radius:4px;font-size:10px;line-height:16px;height:16px}
+.ic-pregunta{background:#FAEEDA;color:#854F0B}.ic-perm{background:#FCEBEB;color:#A32D2D}.ic-bash{background:#E6F1FB;color:#0C447C}
+.ic-edit{background:#EEEDFE;color:#3C3489}.ic-sub{background:#E1F5EE;color:#085041}.ic-start,.ic-end{background:#F1EFE8;color:#444441}
+@media (prefers-color-scheme:dark){.ic-pregunta{background:#633806;color:#FAC775}.ic-perm{background:#5c2020;color:#F09595}.ic-bash{background:#163352;color:#9CC7EE}
+.ic-edit{background:#2d2a5c;color:#BDB8F2}.ic-sub{background:#11402f;color:#97D9BC}.ic-start,.ic-end{background:#3a3936;color:#d3d1c7}}
+mark{background:#FAC775;color:#412402;border-radius:2px;padding:0 1px}
+.fila-crono{cursor:pointer}
+.fila-crono:hover text{text-decoration:underline}
+.tip-crono{position:absolute;pointer-events:none;background:var(--surface-2);border:.5px solid var(--border-strong);border-radius:6px;padding:4px 8px;font-size:11px;white-space:nowrap;z-index:2}
+#b-lista{max-height:300px;overflow:auto;border-top:.5px solid var(--border);padding-top:4px}
 [hidden]{display:none!important}
-@media (max-width:640px){.g-sup,.g-dos,.salas{grid-template-columns:minmax(0,1fr)}.g-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.room.ancha{grid-column:auto}}
+@media (max-width:640px){.g-sup,.g-dos,.salas,.g-atascos,#v-actividad .g-dos{grid-template-columns:minmax(0,1fr)}.g-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.room.ancha{grid-column:auto}}
 </style>
 </head>
 <body>
 <div class="t marco">
   <div class="cab">
-    <span class="tabs" role="tablist"><button id="tab-panel" class="on" role="tab">Panel</button> <button id="tab-oficina" role="tab">Oficina</button></span>
+    <span class="tabs" role="tablist"><button id="tab-panel" class="on" role="tab">Panel</button> <button id="tab-oficina" role="tab">Oficina</button> <button id="tab-actividad" role="tab">Actividad</button></span>
     <span class="mut" id="cabecera">huddle</span>
   </div>
 
@@ -150,7 +168,34 @@ dialog.detalle::backdrop{background:rgba(0,0,0,.28)}
       <div class="tip" id="tip" hidden></div>
       <div class="escena-vacia" id="escena-vacia" hidden><span>Nadie trabajando ahora · abre una sesión de Claude Code</span></div>
     </div>
-    <div class="mut" style="margin-top:10px;font-size:11px"><span style="color:#1D9E75">●</span> trabajando <span style="color:#BA7517">●</span> espera aprobación <span style="color:#B4B2A9">●</span> en pausa <span style="color:#888780">●</span> inactivo · rol: <span style="color:#D85A30">■</span> lead <span style="color:#7F77DD">■</span> explore <span style="color:#378ADD">■</span> plan <span style="color:#1D9E75">■</span> tests</div>
+    <div class="mut" style="margin-top:10px;font-size:11px"><span style="color:#1D9E75">●</span> trabajando <span style="color:#BA7517">●</span> espera aprobación <span style="color:#B4B2A9">●</span> en pausa <span style="color:#888780">●</span> inactivo <span style="color:#E24B4A">●</span> atascada · rol: <span style="color:#D85A30">■</span> lead <span style="color:#7F77DD">■</span> explore <span style="color:#378ADD">■</span> plan <span style="color:#1D9E75">■</span> tests</div>
+  </section>
+
+  <section id="v-actividad" hidden>
+    <div class="box">
+      <div class="fila"><span class="lab" id="atascos-titulo">Atascos</span><span class="mut" style="font-size:11px">se revisa en cada evento</span></div>
+      <div id="atascos"></div>
+    </div>
+    <div class="box mt" style="position:relative">
+      <div class="fila" style="align-items:center;flex-wrap:wrap"><span class="lab" style="margin:0">Cronograma de hoy</span><span id="espera" style="font-size:11px"></span></div>
+      <svg id="crono" width="100%" viewBox="0 0 800 60" role="img" style="margin-top:6px;display:block"><title>Cronograma de las sesiones de hoy</title></svg>
+      <div class="tip-crono" id="crono-tip" hidden></div>
+      <div class="mut" style="font-size:11px;display:flex;gap:14px;flex-wrap:wrap"><span><span style="color:#1D9E75">■</span> trabajando</span><span><span style="color:#EF9F27">■</span> esperándote</span><span><span style="color:#B4B2A9">■</span> pausa</span><span><span style="color:#E24B4A">■</span> atascada</span><span>│ ahora</span><span>· clic en una sesión: su bitácora</span></div>
+    </div>
+    <div class="g-dos">
+      <div class="box" id="caja-bitacora">
+        <div class="fila" style="align-items:center;flex-wrap:wrap"><span class="lab" style="margin:0">Bitácora</span><input id="q" type="search" placeholder="buscar: auth.ts, test, merge…" style="font:inherit;font-size:11px;width:210px;padding:4px 8px;border:.5px solid var(--border-strong);border-radius:var(--radius);background:var(--surface-2);color:var(--text-primary)"></div>
+        <div id="b-sesiones" style="display:flex;gap:4px;flex-wrap:wrap;margin:8px 0 4px"></div>
+        <div id="b-info" style="font-size:11px;margin-bottom:4px"></div>
+        <div id="b-lista"></div>
+      </div>
+      <div class="box">
+        <div class="fila" style="align-items:center"><span class="lab" style="margin:0">Uso por proyecto</span><span id="u-periodo" style="display:flex;gap:4px"></span></div>
+        <div style="display:flex;gap:12px;align-items:center;margin:10px 0"><svg width="84" height="84" viewBox="0 0 42 42" id="u-anillo" role="img"><title>Uso del periodo</title></svg><div id="u-texto" style="font-size:11.5px;line-height:1.6"></div></div>
+        <div id="u-barras"></div>
+        <div id="u-nota" style="font-size:11px;margin-top:8px;line-height:1.6"></div>
+      </div>
+    </div>
   </section>
 
   <dialog class="detalle t" id="detalle" aria-labelledby="det-titulo">
@@ -170,7 +215,7 @@ dialog.detalle::backdrop{background:rgba(0,0,0,.28)}
   'use strict'
   const $ = id => document.getElementById(id)
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c])
-  const COLOR = { w: '#1D9E75', a: '#BA7517', p: '#B4B2A9', i: '#888780' }
+  const COLOR = { w: '#1D9E75', a: '#BA7517', p: '#B4B2A9', i: '#888780', x: '#E24B4A' }
   const depurar = /depurar/.test(location.search)
 
   // --- vista activa: pestaña y modo, que sobreviven a cada repintado (y a recargar, por el hash)
@@ -178,13 +223,16 @@ dialog.detalle::backdrop{background:rgba(0,0,0,.28)}
   let modo = 'sesiones'
   const h = location.hash.slice(1).split('-')
   if (h[0] === 'oficina') vista = 'oficina'
+  if (h[0] === 'actividad') vista = 'actividad'
   if (h[1] === 'agentes') modo = 'agentes'
 
   function mostrar() {
     $('v-panel').hidden = vista !== 'panel'
     $('v-oficina').hidden = vista !== 'oficina'
+    $('v-actividad').hidden = vista !== 'actividad'
     $('tab-panel').classList.toggle('on', vista === 'panel')
     $('tab-oficina').classList.toggle('on', vista === 'oficina')
+    $('tab-actividad').classList.toggle('on', vista === 'actividad')
     $('modo-sesiones').classList.toggle('on', modo === 'sesiones')
     $('modo-agentes').classList.toggle('on', modo === 'agentes')
     const lienzo = escena !== 'clasica'
@@ -200,6 +248,7 @@ dialog.detalle::backdrop{background:rgba(0,0,0,.28)}
   }
   $('tab-panel').onclick = () => { vista = 'panel'; mostrar() }
   $('tab-oficina').onclick = () => { vista = 'oficina'; mostrar() }
+  $('tab-actividad').onclick = () => { vista = 'actividad'; mostrar() }
   const cambiarModo = m => { modo = m; guardar(); mostrar(); if (H) { bloques.oficina(H); Motor.sincronizar(H) } }
   $('modo-sesiones').onclick = () => cambiarModo('sesiones')
   $('modo-agentes').onclick = () => cambiarModo('agentes')
@@ -231,7 +280,7 @@ dialog.detalle::backdrop{background:rgba(0,0,0,.28)}
   $('arbol').addEventListener('keydown', e => { const f = e.target.closest('[data-clave]'); if (f && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); abrirDetalle(f.dataset.clave) } })
 
   const barra = (pct, color, alto) => `<div class="bar"${alto ? ` style="height:${alto}px"` : ''}><i style="width:${pct === null ? 0 : pct}%;background:${color}"></i></div>`
-  const icono = e => e === 'w' ? '<span class="sp">◐</span>' : e === 'a' ? '<span style="color:var(--text-warning)">⏸</span>' : e === 'i' ? '<span class="mut">z</span>' : '<span class="mut">·</span>'
+  const icono = e => e === 'x' ? '<span style="color:var(--text-danger)" title="atascada">↻</span>' : e === 'w' ? '<span class="sp">◐</span>' : e === 'a' ? '<span style="color:var(--text-warning)">⏸</span>' : e === 'i' ? '<span class="mut">z</span>' : '<span class="mut">·</span>'
 
   // --- Rex en SVG (el sprite de 10×10 de la maqueta)
   const SPRITE = ['....####..', '....#o####', '....######', '....####..', '#..######.', '########..', '.######...', '..#..#....', '..#..#....', '..........']
@@ -260,7 +309,8 @@ dialog.detalle::backdrop{background:rgba(0,0,0,.28)}
     else if (s === 'a') p += `<rect x="3" y="2" width="3" height="3" fill="#F0997B"/><rect x="2" y="5" width="5" height="3" fill="${color}"/><rect x="6" y="0" width="1" height="5" fill="${color}"/><text x="7.5" y="3" font-size="3.5" fill="#BA7517" font-family="monospace" class="bl">!</text>`
     else if (s === 'p') p += `<rect x="3" y="2" width="3" height="3" fill="#F0997B"/><rect x="2" y="5" width="5" height="3" fill="${color}"/><rect x="7" y="7" width="2" height="1" fill="${color}"/>`
     else p += `<rect x="3" y="2" width="3" height="3" fill="#F0997B"/><rect x="2" y="5" width="5" height="3" fill="${color}"/><g class="ty"><rect x="7" y="6" width="2" height="1" fill="${color}"/></g>`
-    const scr = s === 'w' ? `<rect x="10" y="4" width="4" height="0.6" fill="${color}"/><rect x="10" y="5.2" width="2.5" height="0.6" fill="${color}" class="bl"/>`
+    if (s === 'x') p += '<text x="5.5" y="1.6" font-size="3.2" fill="#E24B4A" font-family="monospace" class="bl">↻</text>'
+    const scr = s === 'x' ? '<rect x="10" y="4" width="4" height="2" fill="#E24B4A" class="bl"/>' : s === 'w' ? `<rect x="10" y="4" width="4" height="0.6" fill="${color}"/><rect x="10" y="5.2" width="2.5" height="0.6" fill="${color}" class="bl"/>`
       : s === 'a' ? '<rect x="11.5" y="4.3" width="1" height="1.5" fill="#BA7517" class="bl"/>'
       : s === 'p' ? '<rect x="10" y="4" width="4" height="0.6" fill="#5F5E5A"/>' : ''
     return `<svg width="64" height="56" viewBox="0 0 16 14" style="image-rendering:pixelated" aria-hidden="true"><rect x="9" y="3" width="6" height="4" fill="#2C2C2A"/>${scr}<rect x="11.5" y="7" width="1" height="1" fill="#5F5E5A"/><rect x="0" y="8" width="16" height="1" fill="#B4B2A9"/><rect x="1" y="9" width="1" height="5" fill="#B4B2A9"/><rect x="14" y="9" width="1" height="5" fill="#B4B2A9"/>${p}</svg>`
@@ -271,7 +321,7 @@ dialog.detalle::backdrop{background:rgba(0,0,0,.28)}
   // H.escenas: cada personaje es una sesión (o un subagente, en modo agentes)
   // y camina a su sitio cuando cambia su estado. Nada se simula.
   // ===================================================================
-  const NOMBRE_ESTADO = { w: 'trabajando', a: 'te espera', p: 'en pausa', i: 'inactiva' }
+  const NOMBRE_ESTADO = { w: 'trabajando', a: 'te espera', p: 'en pausa', i: 'inactiva', x: 'atascada' }
   const guardado = (() => {
     try { return JSON.parse(localStorage.getItem('huddle.oficina') || '{}') || {} } catch (e) { return {} }
   })()
@@ -343,7 +393,7 @@ dialog.detalle::backdrop{background:rgba(0,0,0,.28)}
       }
       rr(x - 4 * s, y - 15 * s - b, 8 * s, 12 * s, 3.5 * s, col)
       if (e === 'a') rect(x + 3 * s, y - 22 * s - b, 2 * s, 8 * s, col)
-      else if (e === 'w' && !andando && !c.task) rect(x + c.face * 3 * s - s, y - 10 * s + (Math.sin(T * 14 + c.ph) > 0 ? s : 0), 2.5 * s, 2 * s, tono(col, -0.25))
+      else if ((e === 'w' || e === 'x') && !andando && !c.task) rect(x + c.face * 3 * s - s, y - 10 * s + (Math.sin(T * 14 + c.ph) > 0 ? s : 0), 2.5 * s, 2 * s, tono(col, -0.25))
       if (c.carry) rect(x + 4 * s, y - 12 * s - b, 4 * s, 4 * s, PAL.papel)
       circ(x, y - 18.5 * s - b, 4 * s, '#F2C6A0')
       c.sx = x; c.sy = y - 10 * s
@@ -353,6 +403,7 @@ dialog.detalle::backdrop{background:rgba(0,0,0,.28)}
       if (e === 'a') { circ(x, y, 7 * s, '#EF9F27', 0.6 + 0.4 * Math.sin(T * 6)); txt(x, y + 3.5 * s, '!', '#412402', 11 * s, 'center', 1) }
       else if (c.moving) return
       else if (e === 'i') { const k = (T * 0.6 + c.ph) % 1; ctx.globalAlpha = 1 - k; txt(x + (5 + k * 4) * s, y + 8 * s - k * 8 * s, 'z', PAL.apagado, 11 * s, 'left', 1); ctx.globalAlpha = 1 }
+      else if (e === 'x') { circ(x, y, 7 * s, '#E24B4A', 0.6 + 0.4 * Math.sin(T * 5)); txt(x, y + 3.5 * s, '↻', '#ffffff', 10 * s, 'center', 1) }
       else if (e === 'w' && !c.task) txt(x, y + 2 * s, '•'.repeat(Math.floor(T * 2.5 + c.ph) % 4), '#1D9E75', 8 * s, 'center')
       else if (e === 'p') txt(x + 4 * s, y + 2 * s, '~', PAL.apagado, 11 * s, 'left')
     }
@@ -465,6 +516,7 @@ dialog.detalle::backdrop{background:rgba(0,0,0,.28)}
               const mon = this.caja(m.x - 0.25, m.y - 0.24, 13 * k, 0.5, 0.07, 11 * k, '#2c2c2a')
               const o = ds[i]
               if (o && o.d.estado === 'w') { ctx.globalAlpha = 0.55 + 0.45 * Math.sin(T * 4 + o.ph); poly([mon.e, mon.c, mon.c0, mon.e0], o.d.color); ctx.globalAlpha = 1 }
+              else if (o && o.d.estado === 'x') { ctx.globalAlpha = 0.5 + 0.5 * Math.sin(T * 5); poly([mon.e, mon.c, mon.c0, mon.e0], '#E24B4A'); ctx.globalAlpha = 1 }
               else if (o && o.d.estado === 'a') { ctx.globalAlpha = 0.5 + 0.5 * Math.sin(T * 6); poly([mon.e, mon.c, mon.c0, mon.e0], '#EF9F27'); ctx.globalAlpha = 1 }
             } })
           }
@@ -548,6 +600,7 @@ dialog.detalle::backdrop{background:rgba(0,0,0,.28)}
               rect(mx, fy - 36, mw, 14, '#2c2c2a')
               const o = ds[i]
               if (o && o.d.estado === 'w') rect(mx + 2, fy - 34, mw - 4, 10, o.d.color, 0.6 + 0.4 * Math.sin(T * 4 + o.ph))
+              else if (o && o.d.estado === 'x') rect(mx + 2, fy - 34, mw - 4, 10, '#E24B4A', 0.5 + 0.5 * Math.sin(T * 5))
               else if (o && o.d.estado === 'a') rect(mx + 2, fy - 34, mw - 4, 10, '#EF9F27', 0.5 + 0.5 * Math.sin(T * 6))
             }
           }
@@ -731,6 +784,207 @@ dialog.detalle::backdrop{background:rgba(0,0,0,.28)}
     return api
   })()
 
+  // ===================================================================
+  // Pestaña Actividad: atascos, cronograma de hoy, bitácora y uso por
+  // proyecto. Todo llega hecho en datos.js; la bitácora, en bitacora.js.
+  // ===================================================================
+  const Actividad = (() => {
+    let A = null
+    let periodo = 'cinco'
+    let BIT = null
+    let versionBit = null
+    let chip = 'todas'
+    let verTodas = false
+    let mostrados = 200
+    let filtrados = []
+    const PASO = 200
+
+    // --- copiar al portapapeles (file:// es contexto seguro; si falla, el truco de siempre)
+    function copiar(texto, boton, hecho) {
+      const ok = () => { const antes = boton.textContent; boton.textContent = hecho; setTimeout(() => { boton.textContent = antes }, 2500) }
+      const viejo = () => {
+        const t = document.createElement('textarea')
+        t.value = texto; t.style.position = 'fixed'; t.style.opacity = '0'
+        document.body.appendChild(t); t.select()
+        try { document.execCommand('copy') } catch (e) { /* sin portapapeles */ }
+        t.remove(); ok()
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(texto).then(ok, viejo)
+      else viejo()
+    }
+
+    // --- atascos: lo ignorado aquí se esconde en este navegador; el comando copiado lo guarda en .agentos
+    const ignoradosAqui = (() => { try { return new Set(JSON.parse(localStorage.getItem('huddle.ignorados') || '[]')) } catch (e) { return new Set() } })()
+    function guardarIgnorados(vivos) {
+      for (const id of [...ignoradosAqui]) if (!vivos.has(id)) ignoradosAqui.delete(id)
+      try { localStorage.setItem('huddle.ignorados', JSON.stringify([...ignoradosAqui])) } catch (e) { /* sin localStorage */ }
+    }
+    function atascos() {
+      const lista = A.atascos.lista
+      guardarIgnorados(new Set(lista.map(a => a.id)))
+      const visibles = lista.filter(a => !ignoradosAqui.has(a.id))
+      const escondidos = lista.length - visibles.length
+      $('atascos-titulo').innerHTML = visibles.length === 0 ? 'Atascos' : `Atascos · <b style="color:var(--text-danger);font-weight:500">${visibles.length}</b> ${visibles.length === 1 ? 'sesión parece' : 'sesiones parecen'} en bucle`
+      if (visibles.length === 0) {
+        $('atascos').innerHTML = `<div style="color:var(--text-success);font-size:12px;margin-top:2px">● Todo fluye · ninguna sesión atascada${escondidos ? ` <span class="mut">(${escondidos} ignorada${escondidos === 1 ? '' : 's'} aquí)</span>` : ''}</div>`
+        return
+      }
+      $('atascos').innerHTML = `<div class="g-atascos">${visibles.map(a => {
+        const p = a.prueba
+        const prueba = [
+          p.comando ? `<code>${esc(p.comando)}</code>${p.error ? ` → «${esc(p.error)}»` : ''}` : '',
+          p.fichero ? `<code>${esc(p.fichero)}</code>${p.tests ? ` · ${esc(p.tests)}` : ''}` : '',
+          p.texto ? esc(p.texto) : '',
+        ].filter(Boolean).join('<br>')
+        return `<div class="stk"><div class="fila"><b style="font-weight:500">${esc(a.sesion)}</b><span class="mut" style="font-size:11px">${esc(a.desde)}</span></div>`
+          + `<div style="color:var(--text-danger);font-size:11.5px;margin:2px 0">${esc(a.motivo)}</div>`
+          + `<div style="font-size:11.5px;overflow-wrap:anywhere">${prueba}</div>`
+          + `<div class="mut" style="font-size:11px;margin:4px 0 6px">${esc(a.pista)}</div>`
+          + `<div style="display:flex;gap:6px;flex-wrap:wrap">${a.abrir ? `<button data-abrir="${esc(a.abrir)}" title="Copia el comando para pegarlo en GENERAL">${esc(a.abrir)} ↗</button>` : ''}<button data-ignorar="${esc(a.id)}" data-cmd="${esc(a.ignorar)}" title="Lo esconde aquí y copia ${esc(a.ignorar)} para que no vuelva a salir">ignorar</button></div></div>`
+      }).join('')}</div>`
+      $('atascos').querySelectorAll('[data-abrir]').forEach(b => { b.onclick = () => copiar(b.dataset.abrir, b, 'copiado ✓') })
+      $('atascos').querySelectorAll('[data-ignorar]').forEach(b => {
+        b.onclick = () => {
+          copiar(b.dataset.cmd, b, 'copiado ✓')
+          ignoradosAqui.add(b.dataset.ignorar)
+          guardarIgnorados(new Set(lista.map(a => a.id)))
+          setTimeout(atascos, 900)
+        }
+      })
+    }
+
+    // --- cronograma
+    const COLOR_CRONO = { w: '#1D9E75', a: '#EF9F27', p: '#B4B2A9', x: '#E24B4A' }
+    const ETIQ = 130, ANCHO = 655
+    function cronograma() {
+      const c = A.cronograma
+      $('espera').innerHTML = c.espera === 'nadie te ha esperado hoy'
+        ? '<span class="mut">nadie te ha esperado hoy</span>'
+        : `<b style="color:var(--text-warning);font-weight:500">${esc(c.espera.split(' · ')[0])}</b>${esc(c.espera.slice(c.espera.indexOf(' · ')))}${c.esperaMax ? ` · ${esc(c.esperaMax.replace(/ \(.*/, ''))} <span class="mut">${esc(c.esperaMax.slice(c.esperaMax.indexOf(' (')))}</span>` : ''}`
+      const X = m => ETIQ + (m - c.inicio) / Math.max(1, c.fin - c.inicio) * ANCHO
+      const alto = 22 + Math.max(1, c.filas.length) * 28 + 4
+      const svg = $('crono')
+      svg.setAttribute('viewBox', `0 0 800 ${alto}`)
+      let g = ''
+      for (const h of c.horas) g += `<line x1="${X(h.min)}" x2="${X(h.min)}" y1="14" y2="${alto - 4}" stroke="var(--border)"/><text x="${X(h.min)}" y="10" text-anchor="middle" font-size="9" fill="var(--text-secondary)" font-family="var(--font-mono)">${esc(h.texto)}</text>`
+      if (c.filas.length === 0) g += `<text x="${ETIQ + 8}" y="35" font-size="10.5" fill="var(--text-secondary)" font-family="var(--font-mono)">Sin actividad todavía hoy.</text>`
+      c.filas.forEach((f, i) => {
+        const y = 22 + i * 28
+        const nombre = f.nombre.length > 19 ? f.nombre.slice(0, 18) + '…' : f.nombre
+        g += `<g class="fila-crono" data-clave="${esc(f.clave)}"><title>Ver la bitácora de ${esc(f.nombre)}</title><text x="0" y="${y + 13}" font-size="10.5" fill="var(--text-primary)" font-family="var(--font-mono)">${esc(nombre)}</text><rect x="${ETIQ}" y="${y + 3}" width="${ANCHO}" height="14" rx="3" fill="var(--surface-1)"/>`
+        for (const t of f.tramos) g += `<rect class="sg" x="${X(t.desde)}" y="${y + 3}" width="${Math.max(1.5, X(t.hasta) - X(t.desde))}" height="14" rx="2" fill="${COLOR_CRONO[t.e]}" data-t="${esc(t.texto)}"/>`
+        g += '</g>'
+      })
+      g += `<line x1="${X(c.ahora)}" x2="${X(c.ahora)}" y1="14" y2="${alto - 4}" stroke="var(--text-primary)" stroke-width="1.2"/>`
+      svg.innerHTML = g
+      const tt = $('crono-tip')
+      svg.querySelectorAll('.sg').forEach(e => {
+        e.onmousemove = ev => { const r = svg.parentElement.getBoundingClientRect(); tt.hidden = false; tt.textContent = e.dataset.t; tt.style.left = Math.min(r.width - tt.offsetWidth - 4, ev.clientX - r.left + 10) + 'px'; tt.style.top = (ev.clientY - r.top + 12) + 'px' }
+        e.onmouseleave = () => { tt.hidden = true }
+      })
+      svg.querySelectorAll('.fila-crono').forEach(e => { e.onclick = () => verSesion(e.dataset.clave) })
+    }
+
+    // --- bitácora
+    const ICONO = { edit: '✎', bash: '▶', sub: '⇢', perm: '!', pregunta: '?', start: '●', end: '○' }
+    function verSesion(clave) {
+      chip = BIT && BIT.sesiones.some(s => s.clave === clave) ? clave : 'todas'
+      $('q').value = ''
+      bitacora()
+      $('caja-bitacora').scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }
+    function resaltar(texto, q) {
+      if (!q) return esc(texto)
+      const bajo = texto.toLowerCase(), b = q.toLowerCase()
+      let out = '', i = 0
+      for (let j = bajo.indexOf(b); j >= 0; j = bajo.indexOf(b, i)) { out += esc(texto.slice(i, j)) + '<mark>' + esc(texto.slice(j, j + b.length)) + '</mark>'; i = j + b.length }
+      return out + esc(texto.slice(i))
+    }
+    function fila(e, q) {
+      const s = BIT.sesiones[e[3]]
+      return `<div class="ev"><span class="mut">${esc(e[0])}</span><span class="ic ic-${e[1]}" title="${e[1]}">${ICONO[e[1]] || '·'}</span><span>${resaltar(e[2], q)}${chip === 'todas' && s ? ` <span class="mut" style="font-size:10.5px">· ${resaltar(s.nombre, q)}</span>` : ''}</span></div>`
+    }
+    function bitacora() {
+      if (!BIT) { $('b-lista').innerHTML = '<div class="vacio" style="padding:8px 0">cargando…</div>'; return }
+      if (chip !== 'todas' && !BIT.sesiones.some(s => s.clave === chip)) chip = 'todas'
+      const LIMITE = 8
+      const sesiones = verTodas ? BIT.sesiones : BIT.sesiones.slice(0, LIMITE)
+      $('b-sesiones').innerHTML = [`<button class="chip${chip === 'todas' ? ' on' : ''}" data-k="todas">todas</button>`, ...sesiones.map(s => `<button class="chip${chip === s.clave ? ' on' : ''}" data-k="${esc(s.clave)}">${esc(s.nombre)}</button>`),
+        ...(BIT.sesiones.length > LIMITE ? [`<button class="chip" data-mas="1">${verTodas ? 'menos' : `+${BIT.sesiones.length - LIMITE}`}</button>`] : [])].join('')
+      $('b-sesiones').querySelectorAll('[data-k]').forEach(b => { b.onclick = () => { chip = b.dataset.k; mostrados = PASO; bitacora() } })
+      const mas = $('b-sesiones').querySelector('[data-mas]')
+      if (mas) mas.onclick = () => { verTodas = !verTodas; bitacora() }
+      const q = $('q').value.trim()
+      const qb = q.toLowerCase()
+      const indice = chip === 'todas' ? -1 : BIT.sesiones.findIndex(s => s.clave === chip)
+      filtrados = BIT.eventos.filter(e => (indice < 0 || e[3] === indice) && (!qb || e[2].toLowerCase().includes(qb) || (BIT.sesiones[e[3]] || {}).nombre?.toLowerCase().includes(qb)))
+      const en = [...new Set(filtrados.map(e => (BIT.sesiones[e[3]] || {}).nombre).filter(Boolean))]
+      $('b-info').innerHTML = q ? `${filtrados.length} ${filtrados.length === 1 ? 'resultado' : 'resultados'} para «${esc(q)}»${en.length ? ` en ${en.map(esc).join(', ')}` : ''} <span class="mut">· últimos 7 días</span>` : ''
+      $('b-lista').innerHTML = filtrados.length === 0
+        ? `<div class="vacio" style="padding:8px 0">${q ? 'Sin resultados.' : 'Sin eventos todavía: aparecen en cuanto una sesión edita, ejecuta un comando o lanza un subagente.'}</div>`
+        : filtrados.slice(0, mostrados).map(e => fila(e, q)).join('')
+    }
+    $('q').addEventListener('input', () => { mostrados = PASO; bitacora() })
+    // De 200 en 200 al llegar al final.
+    $('b-lista').addEventListener('scroll', () => {
+      const l = $('b-lista')
+      if (mostrados >= filtrados.length || l.scrollTop + l.clientHeight < l.scrollHeight - 40) return
+      const q = $('q').value.trim()
+      l.insertAdjacentHTML('beforeend', filtrados.slice(mostrados, mostrados + PASO).map(e => fila(e, q)).join(''))
+      mostrados += PASO
+    })
+    function cargarBitacora(v) {
+      if (v === versionBit) return
+      const s = document.createElement('script')
+      s.src = 'bitacora.js?t=' + Date.now()
+      s.onload = () => {
+        s.remove()
+        if (!window.HUDDLE_BITACORA) return
+        BIT = window.HUDDLE_BITACORA
+        versionBit = BIT.version
+        const l = $('b-lista'), arriba = l.scrollTop
+        const antes = mostrados
+        bitacora()
+        // Al llegar eventos nuevos no se pierde lo cargado ni el scroll.
+        if (antes > PASO) { const q = $('q').value.trim(); l.insertAdjacentHTML('beforeend', filtrados.slice(PASO, antes).map(e => fila(e, q)).join('')); mostrados = antes }
+        l.scrollTop = arriba
+      }
+      s.onerror = () => { s.remove() }
+      document.head.appendChild(s)
+    }
+
+    // --- uso por proyecto
+    function uso() {
+      $('u-periodo').innerHTML = [['cinco', '5 h'], ['semana', 'semana']].map(([k, t]) => `<button class="chip${k === periodo ? ' on' : ''}" data-p="${k}">${t}</button>`).join('')
+      $('u-periodo').querySelectorAll('[data-p]').forEach(b => { b.onclick = () => { periodo = b.dataset.p; uso() } })
+      const u = A.uso[periodo]
+      let a = 0
+      let r = '<circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--surface-1)" stroke-width="5"/>'
+      for (const p of u.proyectos) {
+        const v = u.pct === null ? p.parte : Math.min(100 - a, Math.max(0, p.pct || 0))
+        if (v <= 0) continue
+        r += `<circle cx="21" cy="21" r="15.9" fill="none" stroke="${p.color}" stroke-width="5" stroke-dasharray="${v} ${100 - v}" stroke-dashoffset="${25 - a}"><title>${esc(p.nombre)}: ${esc(p.texto)}</title></circle>`
+        a += v
+      }
+      r += `<text x="21" y="23.5" text-anchor="middle" font-size="7" fill="var(--text-primary)" font-family="var(--font-mono)">${esc(u.texto.replace(' ', ''))}</text>`
+      $('u-anillo').innerHTML = r
+      $('u-texto').innerHTML = `<b style="font-weight:500">${esc(u.texto)}</b> de la ${esc(u.titulo)}<br><span class="mut">${esc(u.pie)}</span>`
+      $('u-barras').innerHTML = u.proyectos.length === 0
+        ? '<div class="vacio">Sin tokens en esta ventana todavía.</div>'
+        : u.proyectos.map(p => `<div style="margin-bottom:7px"><div class="fila" style="font-size:11px"><span><span style="color:${p.color}">■</span> ${esc(p.nombre)}</span><span><b style="font-weight:500">${esc(p.texto)}</b> <span class="mut">· ${esc(p.parteTexto)}</span></span></div><div style="height:7px;border-radius:4px;background:var(--surface-1);margin-top:2px"><div style="height:7px;border-radius:4px;width:${p.parte}%;background:${p.color}"></div></div></div>`).join('')
+      $('u-nota').innerHTML = u.nota.map(n => `<div><span style="color:${u.aviso ? 'var(--text-warning)' : 'var(--text-secondary)'}">${u.aviso ? '▲' : '·'}</span> ${esc(n)}</div>`).join('')
+    }
+
+    return {
+      pintar(H) {
+        A = H.pestanaActividad
+        atascos(); cronograma(); uso()
+        cargarBitacora(A.bitacora.version)
+        if (!BIT) bitacora()
+      },
+    }
+  })()
+
   // --- cada bloque se pinta por separado; solo se repintan los que cambian
   const bloques = {
     cabecera: H => { $('cabecera').textContent = H.cabecera },
@@ -795,12 +1049,13 @@ dialog.detalle::backdrop{background:rgba(0,0,0,.28)}
     oficina: H => {
       const salas = H.oficina[modo]
       const r = H.oficina.resumen[modo]
-      $('resumen').innerHTML = `${esc(r.total)} · <span style="color:#1D9E75">${esc(r.trabajando)}</span> · <span style="color:#BA7517">${esc(r.esperan)}</span> · ${esc(r.inactivas)}`
+      $('resumen').innerHTML = `${esc(r.total)} · <span style="color:#1D9E75">${esc(r.trabajando)}</span> · <span style="color:#BA7517">${esc(r.esperan)}</span> · ${esc(r.inactivas)}${r.atascadas ? ` · <span style="color:var(--text-danger)">${esc(r.atascadas)}</span>` : ''}`
       $('salas').innerHTML = salas.length === 0
         ? '<div class="vacio">La oficina está vacía: no hay ninguna sesión abierta.</div>'
         : salas.map(s => `<div class="room${s.empleados.length > 2 ? ' ancha' : ''}"><div class="fila"><span style="font-weight:500">${esc(s.nombre)}</span><span class="mut" style="font-size:11px">${esc(s.contador)}</span></div><div class="desks">${s.empleados.map(e => `<div class="desk" title="${esc(e.etiqueta)} · ${esc(e.actividad)}">${worker(e.color, e.estado)}<div style="font-size:11px"><span style="color:${COLOR[e.estado]}">●</span> ${esc(e.etiqueta)}</div><div class="mut" style="font-size:11px">${esc(e.actividad)}</div></div>`).join('')}</div></div>`).join('')
     },
     escenas: H => { Motor.sincronizar(H) },
+    pestanaActividad: H => { Actividad.pintar(H) },
     detalles: () => { pintarDetalle() },
     pie: H => { $('pie').textContent = H.pie },
   }

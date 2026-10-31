@@ -154,8 +154,32 @@ export function instalarSistema(on: On, s: SistemaFalso): void {
       return ok
     }
     if (argv[0] === 'rm') {
-      for (const f of args.slice(1)) s.ficheros.delete(f)
+      for (const f of args.slice(1)) {
+        s.ficheros.delete(f)
+        // rm -rf de una carpeta: todo lo que cuelga de ella.
+        for (const g of [...s.ficheros.keys()]) if (g.startsWith(`${f}/`)) s.ficheros.delete(g)
+        for (const d of [...s.dirs]) if (d === f || d.startsWith(`${f}/`)) s.dirs.delete(d)
+      }
       return ok
+    }
+    // `sh -c '… cat >> "$1"'`: añadir al final (bitácora, tramos); `tail -c +N | head -c M`: leer desde un punto.
+    if (argv[0] === 'sh' && argv[1] === '-c') {
+      const guion = argv[2] ?? ''
+      const ruta = argv[4] ?? ''
+      if (guion.includes('cat >>')) {
+        if (s.discoRoto) return { value: { ...ok.value, exitCode: 1 } }
+        s.ficheros.set(ruta, (s.ficheros.get(ruta) ?? '') + (e.init?.stdin ?? ''))
+        s.mtimes.set(ruta, ++reloj)
+        anotarDirs(s, ruta)
+        return ok
+      }
+      if (guion.includes('tail -c')) {
+        s.tocadas.push(ruta)
+        const texto = s.ficheros.get(ruta)
+        if (texto === undefined) return { value: { ...ok.value, exitCode: 1 } }
+        const desde = Number(argv[5]) - 1
+        return { value: { ...ok.value, stdout: texto.slice(desde, desde + Number(argv[6])) } }
+      }
     }
     if (argv[0] === 'head') {
       const n = Number(argv[2])

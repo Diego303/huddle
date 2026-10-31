@@ -67,7 +67,7 @@ describe('el modelo de la web (datos.js)', () => {
       ['proyecto-c', '1 sesión'],
     ])
     expect(m.oficina.agentes[0]?.empleados.map(e => e.etiqueta)).toEqual(['STR-lead-02', 'STR-lead-01', 'STR-explore-01'])
-    expect(m.oficina.resumen.sesiones).toEqual({ total: '4 sesiones', trabajando: '1 trabajando', esperan: '1 espera', inactivas: '1 inactiva' })
+    expect(m.oficina.resumen.sesiones).toEqual({ total: '4 sesiones', trabajando: '1 trabajando', esperan: '1 espera', inactivas: '1 inactiva', atascadas: '' })
   })
 
   test('sin datos, n/d y estados vacíos; nunca números inventados', () => {

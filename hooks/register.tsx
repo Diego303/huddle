@@ -17,7 +17,12 @@ import { refresh } from '../lib/comandos/refresh.ts'
 import { registro } from '../lib/comandos/registro.ts'
 import { esHerramientaDeAgente } from '../lib/detalle.ts'
 import {
+  anotarFin,
+  anotarInicio,
+  anotarNotificacion,
   anotarOrigen,
+  anotarPermiso,
+  anotarSubagenteFin,
   arrancarSesion,
   cambiarDirectorio,
   cerrarSesion,
@@ -108,8 +113,8 @@ async function registrarComandos($: EngineInterface): Promise<void> {
   })
   await $.command.register({
     name: 'huddle',
-    description: 'Huddle: «/huddle web» abre la vista web en vivo en el navegador',
-    argumentHint: 'web',
+    description: 'Huddle: «/huddle web» abre la vista web en vivo; «/huddle ignorar <id>» ignora un atasco',
+    argumentHint: 'web | ignorar <id>',
   })
   await $.command.register({
     name: 'cierre',
@@ -167,6 +172,7 @@ export const register: Register = on => {
     const tool = String(e.tool)
     const base = e.agentId === undefined ? {} : { agentId: e.agentId }
     registrar($, { tipo: 'herramienta_inicio', tool, entrada: e as Record<string, unknown>, tool_use_id: e.tool_use_id, ...base })
+    anotarInicio($, tool, e as Record<string, unknown>, e.tool_use_id, e.agentId)
     const r = await next(e)
     registrar($, {
       tipo: 'herramienta_fin',
@@ -175,10 +181,12 @@ export const register: Register = on => {
       ...base,
       ...(esHerramientaDeAgente(tool) ? lanzamiento(r) : {}),
     })
+    anotarFin($, tool, e.tool_use_id, r)
     return r
   }).catch(($, e, next) => next(e))
 
   on('classic.PermissionRequest', ($, e, next) => {
+    if (e.agent_id === undefined) anotarPermiso(e.tool_name, e.tool_input)
     registrar(
       $,
       e.agent_id === undefined
@@ -194,6 +202,7 @@ export const register: Register = on => {
   }).catch(($, e, next) => next(e))
 
   on('classic.Notification', ($, e, next) => {
+    anotarNotificacion($, e.notification_type, e.message)
     registrar($, { tipo: 'notificacion', notificacion: e.notification_type })
     return next(e)
   }).catch(($, e, next) => next(e))
@@ -209,6 +218,7 @@ export const register: Register = on => {
   }).catch(($, e, next) => next(e))
 
   on('classic.SubagentStop', ($, e, next) => {
+    anotarSubagenteFin($, e.agent_id, e.agent_type)
     registrar($, { tipo: 'subagente_fin', agentId: e.agent_id })
     return next(e)
   }).catch(($, e, next) => next(e))

@@ -65,6 +65,28 @@ export async function borrar($: EngineInterface, ruta: string): Promise<void> {
   }
 }
 
+/**
+ * Añade texto al final de un fichero (creando su carpeta si hace falta). Es
+ * lo que usan la bitácora y los tramos: líneas cortas, varias sesiones a la vez.
+ */
+export async function anadir($: EngineInterface, ruta: string, texto: string): Promise<boolean> {
+  try {
+    const r = await $.process.run(['sh', '-c', 'mkdir -p "$(dirname "$1")" && cat >> "$1"', 'huddle', ruta], { stdin: texto, timeoutMs: 5000 })
+    return r.exitCode === 0
+  } catch {
+    return false
+  }
+}
+
+/** Borra una carpeta entera (solo la usan la rotación de la bitácora y los tramos). */
+export async function borrarCarpeta($: EngineInterface, ruta: string): Promise<void> {
+  try {
+    await $.process.run(['rm', '-rf', '--', ruta])
+  } catch {
+    // se reintenta en la siguiente sesión
+  }
+}
+
 /** Las subcarpetas visibles de primer nivel (solo nombres: no entra en ninguna). */
 export async function listarCarpetas($: EngineInterface, ruta: string): Promise<string[]> {
   const entradas = await $.fs.list(ruta)

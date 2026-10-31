@@ -8,8 +8,10 @@ export type ActividadSesion = {
   session_id: string
   proyecto: string
   dias: Record<string, number>
-  /** Tokens por hora local (`AAAA-MM-DDTHH`), solo para estimar el uso sin dato oficial. */
+  /** Tokens por hora local (`AAAA-MM-DDTHH`), de los transcripts: el uso por proyecto y el `≈` sin dato oficial. */
   tokens?: Record<string, number>
+  /** Hasta dónde se ha leído cada transcript (bytes) y el último mensaje contado. */
+  transcripts?: Record<string, { offset: number; ultimo: string | null }>
 }
 
 /** Cuántas horas de tokens se guardan (una semana y un día). */
@@ -24,11 +26,20 @@ export function sumarTurno(a: ActividadSesion, dia: string): ActividadSesion {
 }
 
 export function sumarTokens(a: ActividadSesion, hora: string, n: number, desdeHora: string): ActividadSesion {
-  if (!(n > 0)) return a
+  return sumarHoras(a, { [hora]: n }, desdeHora)
+}
+
+/** Suma tokens por hora y quita las horas anteriores a `desdeHora`. */
+export function sumarHoras(a: ActividadSesion, porHora: Readonly<Record<string, number>>, desdeHora: string): ActividadSesion {
   const tokens: Record<string, number> = {}
   for (const [h, v] of Object.entries(a.tokens ?? {})) if (h >= desdeHora) tokens[h] = v
-  tokens[hora] = (tokens[hora] ?? 0) + n
-  return { ...a, tokens }
+  let algo = false
+  for (const [h, n] of Object.entries(porHora)) {
+    if (!(n > 0) || h < desdeHora) continue
+    tokens[h] = (tokens[h] ?? 0) + n
+    algo = true
+  }
+  return algo || Object.keys(tokens).length !== Object.keys(a.tokens ?? {}).length ? { ...a, tokens } : a
 }
 
 /** Quita los días anteriores a `desde` (formato AAAA-MM-DD, que se ordena como texto). */
@@ -51,14 +62,32 @@ export function interpretarActividad(json: string): ActividadSesion | null {
     const dias: Record<string, number> = {}
     for (const [d, n] of Object.entries(v.dias)) if (/^\d{4}-\d{2}-\d{2}$/.test(d) && typeof n === 'number' && n > 0) dias[d] = n
     const tokens = horas(v.tokens)
-    return Object.keys(tokens).length > 0 ? { session_id: v.session_id, proyecto: v.proyecto, dias, tokens } : { session_id: v.session_id, proyecto: v.proyecto, dias }
+    const transcripts: NonNullable<ActividadSesion['transcripts']> = {}
+    if (v.transcripts && typeof v.transcripts === 'object') {
+      for (const [f, t] of Object.entries(v.transcripts)) {
+        if (t && typeof t.offset === 'number' && t.offset >= 0) transcripts[f] = { offset: t.offset, ultimo: typeof t.ultimo === 'string' ? t.ultimo : null }
+      }
+    }
+    return {
+      session_id: v.session_id,
+      proyecto: v.proyecto,
+      dias,
+      ...(Object.keys(tokens).length > 0 ? { tokens } : {}),
+      ...(Object.keys(transcripts).length > 0 ? { transcripts } : {}),
+    }
   } catch {
     return null
   }
 }
 
 /** `.agentos/actividad.json`: lo que /refresh junta de las sesiones ya cerradas. */
-export type ActividadTotal = { dias: Record<string, Record<string, number>>; total: number; tokens?: Record<string, number> }
+export type ActividadTotal = {
+  dias: Record<string, Record<string, number>>
+  total: number
+  tokens?: Record<string, number>
+  /** Los mismos tokens por proyecto: proyecto → hora → tokens. */
+  tokensProyecto?: Record<string, Record<string, number>>
+}
 
 export function actividadTotalVacia(): ActividadTotal {
   return { dias: {}, total: 0 }
@@ -69,7 +98,19 @@ export function interpretarActividadTotal(json: string): ActividadTotal | null {
     const v = JSON.parse(json) as Partial<ActividadTotal>
     if (typeof v.dias !== 'object' || v.dias === null || typeof v.total !== 'number') return null
     const tokens = horas(v.tokens)
-    return Object.keys(tokens).length > 0 ? { dias: v.dias as ActividadTotal['dias'], total: v.total, tokens } : { dias: v.dias as ActividadTotal['dias'], total: v.total }
+    const porProyecto: Record<string, Record<string, number>> = {}
+    if (v.tokensProyecto && typeof v.tokensProyecto === 'object') {
+      for (const [p, h] of Object.entries(v.tokensProyecto)) {
+        const hs = horas(h)
+        if (Object.keys(hs).length > 0) porProyecto[p] = hs
+      }
+    }
+    return {
+      dias: v.dias as ActividadTotal['dias'],
+      total: v.total,
+      ...(Object.keys(tokens).length > 0 ? { tokens } : {}),
+      ...(Object.keys(porProyecto).length > 0 ? { tokensProyecto: porProyecto } : {}),
+    }
   } catch {
     return null
   }
@@ -88,7 +129,21 @@ export function juntar(total: ActividadTotal, sesion: ActividadSesion, desde: st
   }
   const tokens: Record<string, number> = {}
   for (const fuente of [total.tokens ?? {}, sesion.tokens ?? {}]) for (const [h, n] of Object.entries(fuente)) if (h >= desdeHora) tokens[h] = (tokens[h] ?? 0) + n
-  return Object.keys(tokens).length > 0 ? { dias, total: total.total + suma, tokens } : { dias, total: total.total + suma }
+  const porProyecto: Record<string, Record<string, number>> = {}
+  for (const [p, hs] of Object.entries(total.tokensProyecto ?? {})) {
+    for (const [h, n] of Object.entries(hs)) if (h >= desdeHora) (porProyecto[p] ??= {})[h] = n
+  }
+  for (const [h, n] of Object.entries(sesion.tokens ?? {})) {
+    if (h < desdeHora) continue
+    const p = (porProyecto[sesion.proyecto] ??= {})
+    p[h] = (p[h] ?? 0) + n
+  }
+  return {
+    dias,
+    total: total.total + suma,
+    ...(Object.keys(tokens).length > 0 ? { tokens } : {}),
+    ...(Object.keys(porProyecto).length > 0 ? { tokensProyecto: porProyecto } : {}),
+  }
 }
 
 /** Turnos de un día en el total (todas las sesiones cerradas). */

@@ -24,13 +24,17 @@ import {
   racha,
   vistaSesiones,
 } from './panel-datos.ts'
+import { huella } from './huella.ts'
 import { unir } from './rutas.ts'
+import type { ActividadWeb, LecturaActividad, ModeloBitacora } from './web-actividad.ts'
+import { atascoActivo, LECTURA_VACIA, leerActividad, lineaBitacoraJs, modeloActividad, modeloBitacora } from './web-actividad.ts'
 import type { Adorno } from '../mod/rex.ts'
 import { adornoHoy, duracion, fechaCabecera, fichasPanel, proyectosEnSeguimiento, reinicio, resumenSeguimiento, semana, textoRacha } from '../mod/panel.ts'
 
 // ------------------------------------------------------------- el modelo
 
-export type EstadoWeb = 'w' | 'a' | 'p' | 'i'
+/** `x`: atascada (pestaña Actividad); solo en la web, el panel del terminal no lo usa. */
+export type EstadoWeb = 'w' | 'a' | 'p' | 'i' | 'x'
 
 export type FilaArbol = { clave: string; nombre: string; tipo: string; detalle: string; estado: EstadoWeb; color: string; sub: boolean }
 export type EmpleadoWeb = { etiqueta: string; actividad: string; estado: EstadoWeb; color: string }
@@ -68,9 +72,11 @@ export type ModeloWeb = {
   actividad: { dias: DiaWeb[]; nota: string }
   siguiente: { titulo: string; acciones: string[] }
   uso: UsoWeb[]
-  oficina: { sesiones: SalaWeb[]; agentes: SalaWeb[]; resumen: Record<'sesiones' | 'agentes', { total: string; trabajando: string; esperan: string; inactivas: string }> }
+  oficina: { sesiones: SalaWeb[]; agentes: SalaWeb[]; resumen: Record<'sesiones' | 'agentes', { total: string; trabajando: string; esperan: string; inactivas: string; atascadas: string }> }
   escenas: { salas: SalaEscena[]; sesiones: PersonajeWeb[]; agentes: PersonajeWeb[] }
   detalles: Record<string, DetalleWeb>
+  /** La pestaña Actividad; la bitácora entera va aparte, en bitacora.js. */
+  pestanaActividad: ActividadWeb
   pie: string
 }
 
@@ -94,6 +100,13 @@ export function estadoWeb(e: EstadoVisible): EstadoWeb {
 
 function colorEstado(e: EstadoVisible): string {
   return e === 'trabajando' ? WEB.trabajando : e === 'te_espera' ? WEB.espera : e === 'en_pausa' ? WEB.pausa : WEB.inactiva
+}
+
+/** El estado de una sesión en la web: un atasco activo la pone en rojo, salvo si te espera. */
+type EstadoDe = (v: SesionVista) => EstadoWeb
+
+function estadoDeVistas(ignorados: DatosPanel['ignorados']): EstadoDe {
+  return v => (v.estado !== 'te_espera' && atascoActivo(v.s, ignorados) ? 'x' : estadoWeb(v.estado))
 }
 
 /** Azul por debajo del 60 %, ámbar del 60 al 80 % y rojo a partir del 80 %. */
@@ -146,7 +159,8 @@ function ms(iso: string | null): number | null {
   return Number.isFinite(t) ? t : null
 }
 
-function textoEstado(v: SesionVista): string {
+function textoEstado(v: SesionVista, ew: EstadoDe): string {
+  if (ew(v) === 'x' && v.s.atasco) return `atascada · ${v.s.atasco.motivo}`
   switch (v.estado) {
     case 'trabajando':
       return 'trabajando'
@@ -159,7 +173,7 @@ function textoEstado(v: SesionVista): string {
   }
 }
 
-function escenasWeb(vistas: readonly SesionVista[], seguimiento: readonly string[], filas: readonly BarraWeb[], ahora: number) {
+function escenasWeb(vistas: readonly SesionVista[], seguimiento: readonly string[], filas: readonly BarraWeb[], ahora: number, ew: EstadoDe) {
   const usadas = new Set(vistas.map(v => salaDe(v, seguimiento)))
   const salas: SalaEscena[] = seguimiento.map((nombre, i) => {
     const f = filas[i]
@@ -175,7 +189,7 @@ function escenasWeb(vistas: readonly SesionVista[], seguimiento: readonly string
   for (const v of vistas) {
     const sala = salaDe(v, seguimiento)
     const proyecto = proyectoDe(v)
-    const base = { clave: claveSesion(v), sala, proyecto, rol: 'lead', estado: estadoWeb(v.estado), actividad: detalleSesion(v), sub: false, lider: '' }
+    const base = { clave: claveSesion(v), sala, proyecto, rol: 'lead', estado: ew(v), actividad: detalleSesion(v), sub: false, lider: '' }
     sesiones.push({ ...base, id: v.etiqueta, color: colorSala.get(sala) ?? WEB.inactiva })
     agentes.push({ ...base, id: v.leadId, color: COLOR_ROL.lead! })
     const inicio = ms(v.s.inicio)
@@ -183,9 +197,10 @@ function escenasWeb(vistas: readonly SesionVista[], seguimiento: readonly string
       titulo: nombreSesion(v),
       subtitulo: `sesión · ${v.leadId}`,
       estado: base.estado,
-      estadoTexto: textoEstado(v),
+      estadoTexto: textoEstado(v, ew),
       filas: [
         ['Actividad', detalleSesion(v)],
+        ...(base.estado === 'x' && v.s.atasco ? [['Atasco', `${v.s.atasco.motivo} · ver la pestaña Actividad`] as [string, string]] : []),
         ['Proyecto', proyecto],
         ['Rama', v.s.rama ?? 'n/d'],
         ['Contexto', v.s.contexto_pct === null ? 'n/d' : `${v.s.contexto_pct}%`],
@@ -230,16 +245,16 @@ function escenasWeb(vistas: readonly SesionVista[], seguimiento: readonly string
   return { escenas: { salas, sesiones, agentes }, detalles }
 }
 
-function salasWeb(vistas: readonly SesionVista[], modo: 'sesiones' | 'agentes'): SalaWeb[] {
+function salasWeb(vistas: readonly SesionVista[], modo: 'sesiones' | 'agentes', ew: EstadoDe): SalaWeb[] {
   const salas = new Map<string, EmpleadoWeb[]>()
   for (const v of vistas) {
     const sala = v.s.tipo === 'torre' ? 'GENERAL' : v.s.proyecto
     const lista = salas.get(sala) ?? []
     salas.set(sala, lista)
     if (modo === 'sesiones') {
-      lista.push({ etiqueta: v.etiqueta, actividad: detalleSesion(v), estado: estadoWeb(v.estado), color: COLOR_ROL.lead! })
+      lista.push({ etiqueta: v.etiqueta, actividad: detalleSesion(v), estado: ew(v), color: COLOR_ROL.lead! })
     } else {
-      lista.push({ etiqueta: v.leadId, actividad: detalleSesion(v), estado: estadoWeb(v.estado), color: COLOR_ROL.lead! })
+      lista.push({ etiqueta: v.leadId, actividad: detalleSesion(v), estado: ew(v), color: COLOR_ROL.lead! })
       for (const a of v.agentes) {
         lista.push({
           etiqueta: a.id,
@@ -262,6 +277,7 @@ function resumenSalas(salas: readonly SalaWeb[], modo: 'sesiones' | 'agentes') {
     trabajando: `${n('w')} trabajando`,
     esperan: `${n('a')} ${n('a') === 1 ? 'espera' : 'esperan'}`,
     inactivas: `${n('i')} ${n('i') === 1 ? 'inactiva' : 'inactivas'}`,
+    atascadas: n('x') === 0 ? '' : `${n('x')} ${n('x') === 1 ? 'atascada' : 'atascadas'}`,
   }
 }
 
@@ -271,25 +287,19 @@ function usoWeb(titulo: string, color: string, ventana: { pct: number; reinicia:
   return { titulo, pct: null, texto: 'n/d', pie: 'configúralo en config.json', color }
 }
 
-/** FNV-1a de 32 bits: la versión de un bloque o del modelo entero. */
-export function huella(texto: string): string {
-  let h = 0x811c9dc5
-  for (let i = 0; i < texto.length; i++) {
-    h ^= texto.charCodeAt(i)
-    h = Math.imul(h, 0x01000193) >>> 0
-  }
-  return h.toString(16).padStart(8, '0')
-}
+export { huella } from './huella.ts'
 
-export function modeloWeb(d: DatosPanel, ahora: number, generado: string): ModeloWeb {
+export function modeloWeb(d: DatosPanel, ahora: number, generado: string, lectura: LecturaActividad = LECTURA_VACIA, bitacora?: ModeloBitacora): ModeloWeb {
   const vistas = vistaSesiones(d.sesiones, ahora, d.inactiva_min)
+  const ew = estadoDeVistas(d.ignorados)
   const fichas = fichasPanel(d, ahora)
   const k = contadores(vistas)
   const pctHoy = d.hoy ? porcentaje(d.hoy) : null
 
   const arbol: FilaArbol[] = []
   for (const v of vistas) {
-    arbol.push({ clave: claveSesion(v), nombre: nombreSesion(v), tipo: 'sesión', detalle: detalleSesion(v), estado: estadoWeb(v.estado), color: colorEstado(v.estado), sub: false })
+    const e = ew(v)
+    arbol.push({ clave: claveSesion(v), nombre: nombreSesion(v), tipo: 'sesión', detalle: e === 'x' && v.s.atasco ? `atascada · ${v.s.atasco.motivo}` : detalleSesion(v), estado: e, color: e === 'x' ? WEB.rojo : colorEstado(v.estado), sub: false })
     for (const [i, a] of v.agentes.entries()) {
       arbol.push({
         clave: claveAgente(v, a, i),
@@ -347,9 +357,10 @@ export function modeloWeb(d: DatosPanel, ahora: number, generado: string): Model
   const u = d.uso
   const e = d.usoEstimado ?? null
   const reinicioEstimado = e && e.reinicioSemana !== null ? reinicio(new Date(e.reinicioSemana).toISOString(), ahora, d.desfase) : 'reinicio n/d'
-  const sesiones = salasWeb(vistas, 'sesiones')
-  const agentes = salasWeb(vistas, 'agentes')
-  const { escenas, detalles } = escenasWeb(vistas, enSeguimiento.map(p => p.nombre), proyectos, ahora)
+  const sesiones = salasWeb(vistas, 'sesiones', ew)
+  const agentes = salasWeb(vistas, 'agentes', ew)
+  const { escenas, detalles } = escenasWeb(vistas, enSeguimiento.map(p => p.nombre), proyectos, ahora, ew)
+  const pestanaActividad = modeloActividad(d, lectura, ahora, bitacora ?? modeloBitacora(d, lectura, ahora))
 
   const sinVersion: Omit<ModeloWeb, 'version'> = {
     generado,
@@ -400,6 +411,7 @@ export function modeloWeb(d: DatosPanel, ahora: number, generado: string): Model
     oficina: { sesiones, agentes, resumen: { sesiones: resumenSalas(sesiones, 'sesiones'), agentes: resumenSalas(agentes, 'agentes') } },
     escenas,
     detalles,
+    pestanaActividad,
     pie: d.sinClasificar > 0 ? `${d.sinClasificar} sin clasificar en PROYECTOS.md` : '',
   }
   // La versión no depende de la hora de generación: si nada cambió, la página no repinta.
@@ -423,12 +435,27 @@ export async function webActiva($: EngineInterface, config: Config): Promise<boo
   return existe($, unir(dirWeb(config), 'dashboard.html'))
 }
 
-/** Lee la carpeta de control y reescribe datos.js (de forma atómica). Devuelve la versión. */
-export async function escribirDatosWeb($: EngineInterface, config: Config, desfase: number, usoPropio: Uso | null, generado: string): Promise<string> {
-  const datos = await leerPanel($, config, desfase, usoPropio)
-  const m = modeloWeb(datos, Date.now(), generado)
+/** La última bitacora.js que escribió este proceso: solo se reescribe cuando cambia. */
+let versionBitacora = ''
+
+/** Escribe datos.js y, si cambió, bitacora.js. Lo usan la torre y las demás sesiones. Devuelve la versión. */
+export async function escribirWeb($: EngineInterface, config: Config, datos: DatosPanel, generado: string): Promise<string> {
+  const ahora = Date.now()
+  const lectura = await leerActividad($, config, datos.desfase)
+  const bitacora = modeloBitacora(datos, lectura, ahora)
+  const rutaBitacora = unir(dirWeb(config), 'bitacora.js')
+  if (bitacora.version !== versionBitacora || !(await existe($, rutaBitacora))) {
+    await escribirAtomico($, rutaBitacora, lineaBitacoraJs(bitacora))
+    versionBitacora = bitacora.version
+  }
+  const m = modeloWeb(datos, ahora, generado, lectura, bitacora)
   await escribirAtomico($, unir(dirWeb(config), 'datos.js'), lineaDatos(m))
   return m.version
+}
+
+/** Lee la carpeta de control y reescribe datos.js (de forma atómica). Devuelve la versión. */
+export async function escribirDatosWeb($: EngineInterface, config: Config, desfase: number, usoPropio: Uso | null, generado: string): Promise<string> {
+  return escribirWeb($, config, await leerPanel($, config, desfase, usoPropio), generado)
 }
 
 /** Copia la plantilla del mod a .agentos/web/dashboard.html. */

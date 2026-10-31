@@ -12,9 +12,7 @@ import type { ModoOficina } from '../types/index.d.ts'
 import { usoDe } from './estado.ts'
 import type { DatosPanel } from './lector.ts'
 import { leerPanel } from './lector.ts'
-import { escribirAtomico } from './ficheros.ts'
-import { unir } from './rutas.ts'
-import { dirWeb, lineaDatos, modeloWeb, webActiva } from './web.ts'
+import { escribirWeb, webActiva } from './web.ts'
 import { ahoraLocal, configActual, desfaseActual, estadoActual } from './sesion.ts'
 
 export const PANEL = 'huddle'
@@ -51,7 +49,7 @@ export async function refrescarPanel($: EngineInterface): Promise<void> {
     if (firma !== ultimo || ahora - webEscrita > REFRESCO_WEB_MS) {
       webEscrita = ahora
       if (await webActiva($, config)) {
-        await escribirAtomico($, unir(dirWeb(config), 'datos.js'), lineaDatos(modeloWeb(datos, ahora, ahoraLocal().slice(11, 19))))
+        await escribirWeb($, config, datos, ahoraLocal().slice(11, 19))
       }
     }
     if (firma === ultimo) return
