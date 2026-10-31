@@ -67,6 +67,32 @@ describe('la torre', () => {
       await ui.unmount()
     }
 
+    // Las teclas: o → oficina, a → modo agentes, p → panel.
+    const ui = await $.ui.mount({ ...props(89, 46), surface: 'terminal' })
+    await ui.press({ key: 'vista-oficina' })
+    await ui.unmount()
+    const oficina = await $.ui.mount({ ...props(89, 46), surface: 'terminal' })
+    expect(await oficina.find({ type: 'Text', text: /huddle · oficina/ })).toBeDefined()
+    expect(await oficina.find({ type: 'Text', text: /\[Sesiones\]/ })).toBeDefined()
+    await oficina.press({ key: 'modo-agentes' })
+    await oficina.unmount()
+    const agentes = await $.ui.mount({ ...props(89, 46), surface: 'desktop' })
+    expect(await agentes.find({ type: 'Text', text: /\[Agentes\]/ })).toBeDefined()
+    expect(await agentes.find({ type: 'Text', text: /STR-lead-01/ })).toBeDefined()
+    await agentes.press({ key: 'vista-panel' })
+    await agentes.unmount()
+
+    // /oficina sesiones desde el prompt cambia de vista y de modo sin reiniciar nada.
+    const r = await $.command.run({ command: 'oficina', args: 'sesiones', origin: { kind: 'composer' }, presentation: { isFullscreen: true, columns: 200 } })
+    expect(r.text).toBe('Oficina · sesiones.')
+    const otra = await $.ui.mount({ ...props(89, 46), surface: 'terminal' })
+    expect(await otra.find({ type: 'Text', text: /\[Sesiones\]/ })).toBeDefined()
+    await otra.unmount()
+    const p = await $.command.run({ command: 'panel', args: '', origin: { kind: 'composer' }, presentation: { isFullscreen: true, columns: 200 } })
+    expect(p.text).toBe('Panel.')
+    const mal = await $.command.run({ command: 'oficina', args: 'todo', origin: { kind: 'composer' }, presentation: { isFullscreen: true, columns: 200 } })
+    expect(mal.text).toContain('Uso: /oficina')
+
     // La disposición ancha también se dibuja sin que el motor la rechace.
     const ancho = await $.ui.mount({ ...props(150, 40), surface: 'terminal' })
     expect(await ancho.find({ type: 'Text', text: /Progreso por proyecto/ })).toBeDefined()

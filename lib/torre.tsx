@@ -5,7 +5,9 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, RenderElement, RenderInput } from 'claude-code'
 
 import { dibujar } from '../mod/dibujar.tsx'
+import { componerOficina } from '../mod/oficina.ts'
 import { componerPanel } from '../mod/panel.ts'
+import type { ModoOficina } from '../types/index.d.ts'
 
 import { usoDe } from './estado.ts'
 import type { DatosPanel } from './lector.ts'
@@ -69,19 +71,56 @@ export async function abrirPanel($: EngineInterface): Promise<string> {
   if (!esTorre()) return 'El panel solo se abre en la carpeta de control (la de /configurar).'
   await update($, vistaAtom, () => 'panel')
   const r = await $.ui.open({ id: PANEL, title: 'Huddle', columns: 90, rows: 44 })
-  return r.isPlaced ? 'Panel abierto.' : `El panel no cabe ahora: ${r.reason ?? 'sin motivo'}`
+  return r.isPlaced ? 'Panel.' : `El panel no cabe ahora: ${r.reason ?? 'sin motivo'}`
 }
 
-/** El hook `ui.render` del panel: lee los datos publicados y dibuja la vista. */
+/** /oficina [sesiones|agentes]: la vista Oficina, en el modo pedido (o el último). */
+export async function abrirOficina($: EngineInterface, args: string): Promise<string> {
+  if (!esTorre()) return 'La oficina solo se abre en la carpeta de control (la de /configurar).'
+  const pedido = args.trim().toLowerCase()
+  if (pedido !== '' && pedido !== 'sesiones' && pedido !== 'agentes') return 'Uso: /oficina [sesiones|agentes]'
+  if (pedido !== '') {
+    const modo: ModoOficina = pedido
+    await update($, modoAtom, () => modo)
+  }
+  await update($, vistaAtom, () => 'oficina')
+  const r = await $.ui.open({ id: PANEL, title: 'Huddle', columns: 90, rows: 44 })
+  const modo = await read($, modoAtom)
+  return r.isPlaced ? `Oficina · ${modo}.` : `El panel no cabe ahora: ${r.reason ?? 'sin motivo'}`
+}
+
+/** El hook `ui.render` del panel: lee los datos publicados y dibuja la vista que toque. */
 export async function pintarPanel($: EngineInterface, e: RenderInput<'Pane'>): Promise<RenderElement> {
   const json = await read($, datosAtom)
   const n = await read($, fotogramaAtom)
+  const vista = await read($, vistaAtom)
+  const modo = await read($, modoAtom)
   let datos: DatosPanel | null = null
   try {
     datos = json ? (JSON.parse(json) as DatosPanel) : null
   } catch {
     datos = null
   }
-  const bloques = componerPanel(datos, e.props.bodyColumns, e.props.scroll.bodyRows, n, Date.now())
-  return dibujar($.ui.resolve(e), bloques)
+  const t = $.ui.resolve(e)
+  const { Box, Button } = t
+  // Teclas: funcionan cuando el panel tiene el foco (ctrl+x tab o un clic).
+  const botones = (
+    <Box flexDirection="row">
+      <Button key="vista-panel" label="Panel" hotkey="p" {...(vista === 'panel' ? { variant: 'primary' as const } : {})} onPress={() => update($, vistaAtom, () => 'panel')} />
+      <Button key="vista-oficina" label="Oficina" hotkey="o" {...(vista === 'oficina' ? { variant: 'primary' as const } : {})} onPress={() => update($, vistaAtom, () => 'oficina')} />
+      {vista === 'oficina' && (
+        <Button key="modo-sesiones" label="Sesiones" hotkey="s" {...(modo === 'sesiones' ? { variant: 'primary' as const } : {})} onPress={() => update($, modoAtom, () => 'sesiones')} />
+      )}
+      {vista === 'oficina' && (
+        <Button key="modo-agentes" label="Agentes" hotkey="a" {...(modo === 'agentes' ? { variant: 'primary' as const } : {})} onPress={() => update($, modoAtom, () => 'agentes')} />
+      )}
+    </Box>
+  )
+  const ahora = Date.now()
+  const columnas = e.props.bodyColumns
+  const bloques =
+    vista === 'oficina'
+      ? [{ tipo: 'lineas' as const, lineas: componerOficina(datos, modo, columnas, n, ahora) }]
+      : componerPanel(datos, columnas, e.props.scroll.bodyRows - 1, n, ahora)
+  return dibujar(t, bloques, botones)
 }

@@ -17,7 +17,7 @@ import {
   pedirUso,
   registrar,
 } from '../lib/sesion.ts'
-import { abrirPanel, iniciarTorre, PANEL, pintarPanel } from '../lib/torre.ts'
+import { abrirOficina, abrirPanel, iniciarTorre, PANEL, pintarPanel } from '../lib/torre.tsx'
 
 /** Un error de un comando se cuenta como su salida, sin romper la sesión. */
 function fallo(err: unknown): { text: string } {
@@ -54,6 +54,11 @@ export const register: Register = on => {
     await $.command.register({
       name: 'panel',
       description: 'Huddle: abre el panel de sesiones, agentes y proyectos',
+    })
+    await $.command.register({
+      name: 'oficina',
+      description: 'Huddle: tus sesiones o agentes como empleados en sus mesas',
+      argumentHint: '[sesiones|agentes]',
     })
     void arrancarSesion($, e.isInteractive).then(() => iniciarTorre($))
     return r
@@ -168,6 +173,14 @@ export const register: Register = on => {
   on('command.run', { command: 'panel' }, async $ => {
     try {
       return { text: await abrirPanel($) }
+    } catch (err) {
+      return fallo(err)
+    }
+  })
+
+  on('command.run', { command: 'oficina' }, async ($, e) => {
+    try {
+      return { text: await abrirOficina($, e.args ?? '') }
     } catch (err) {
       return fallo(err)
     }

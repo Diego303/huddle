@@ -52,10 +52,11 @@ function rex(t: ElementTable, celdas: Celda[][]): RenderElement {
   return rexComoTexto(t, celdas)
 }
 
-export function dibujar(t: ElementTable, bloques: readonly Bloque[]): RenderElement {
+export function dibujar(t: ElementTable, bloques: readonly Bloque[], botones?: RenderElement): RenderElement {
   const { Box } = t
   return (
     <Box flexDirection="column">
+      {botones}
       {bloques.map(b =>
         b.tipo === 'lineas' ? (
           <Box flexDirection="column">{b.lineas.map(l => linea(t, l))}</Box>

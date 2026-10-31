@@ -231,3 +231,11 @@ huddle/
 - **Uso:** el de la propia torre (`$.session.usage()` en cada lectura) o el más reciente que guardó cualquier sesión. Sin dato, `n/d · configúralo en config.json`.
 - **Siguiente acción:** la de `ESTADO.md`; si no hay, por reglas, marcada «(por reglas)»: primero lo que te espera y luego el contexto alto. Las de commits sin push llegan con `/refresh`.
 - **Prueba real (pantalla completa, 200 × 50):** el panel se acopló con 89 columnas. Al pedir permiso otra sesión, en ≤ 2 s pasó a «Te esperan 1», Rex se puso en alerta («¡feat-x te espera!») y apareció `STR-explore-01`. Tras aprobar, pasó a trabajando y luego a durmiendo, con el contexto real (4 %).
+
+## 8. Decisiones de la Fase 4
+
+- **Una vista más en el mismo panel:** `huddle.vista` (`panel` u `oficina`) y `huddle.modo` (`sesiones` o `agentes`) viven en `$.state`, así que se cambia de vista y de modo sin reiniciar la sesión. Arriba del panel hay botones `[ Panel ] [ Oficina ]`, y en la oficina además `[ Sesiones ] [ Agentes ]`. Sus teclas son `p`, `o`, `s` y `a`, y funcionan cuando el panel tiene el foco. **`ctrl+x tab` alterna** el foco: púlsalo una vez para dárselo al panel; otra vez, o `Esc`, lo devuelve al prompt.
+- **Comandos:** `/oficina [sesiones|agentes]` (sin argumento, el último modo) y `/panel`. Fuera de la carpeta de control explican que no hay panel.
+- **Salas:** una por proyecto, con la torre en `GENERAL` y lo de fuera de seguimiento en `otros`, ordenadas como la lista del panel: primero lo que te espera. Cada empleado mide 19 columnas, lo justo para `struo·feat-export`, así que en el panel acoplado caben 4 por fila. Una sala con más de 4 empleados ocupa todo el ancho y pasa a varias filas; las pequeñas se colocan una al lado de otra.
+- **Empleados:** `trabajando` teclea (el brazo alterna `▀`/`▄`) con el monitor parpadeando en verde y azul. `te_espera` levanta el brazo con un `!` ámbar que parpadea. `en_pausa` e `inactiva` tienen la cabeza en la mesa y una `z` que se mueve. En el modo agentes, la camiseta lleva el color del rol.
+- **Prueba real:** `/oficina` y la tecla `a` (con el panel enfocado) en una sesión real en pantalla completa, con otra sesión trabajando (`PAG-lead-01 · Bash · sleep`).
