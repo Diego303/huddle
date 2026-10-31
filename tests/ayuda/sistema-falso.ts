@@ -21,6 +21,10 @@ export type SistemaFalso = {
   /** Mientras exista, cada escritura espera a que se resuelva (para provocar carreras). */
   pausa: Promise<void> | null
   sesion: { id: string; repo: string | null; uso: unknown; agentes: unknown[] }
+  /** Respuestas a otros procesos (git, claude…): si devuelve algo, gana. */
+  responder: ((argv: string[], cwd: string | undefined) => { exitCode?: number; stdout?: string; stderr?: string } | undefined) | null
+  /** Con qué cwd se lanzó cada proceso de `procesos`. */
+  cwds: (string | undefined)[]
 }
 
 /** Plantillas de prueba: cualquier lectura bajo .../templates/GENERAL/ se responde con esto. */
@@ -64,6 +68,8 @@ export function crearSistema(inicial: {
     lanzados: [],
     discoRoto: false,
     pausa: null,
+    responder: null,
+    cwds: [],
     sesion: { id: 'sesion-1', repo: null, uso: { startedAt: 0, context: { window: 1000000 }, rateLimits: [] }, agentes: [] },
   }
   for (const f of s.ficheros.keys()) anotarDirs(s, f)
@@ -111,7 +117,10 @@ export function instalarSistema(on: On, s: SistemaFalso): void {
   on('process.run', (_, e) => {
     const argv = [...e.argv]
     s.procesos.push(argv)
+    s.cwds.push(e.init?.cwd)
     const ok = { value: { exitCode: 0, stdout: '', stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }
+    const propia = s.responder?.(argv, e.init?.cwd)
+    if (propia) return { value: { ...ok.value, ...propia } }
     const args = argv.filter(a => a !== '--' && !a.startsWith('-'))
     if (argv[0] === 'date') return { value: { ...ok.value, stdout: '+0100\n' } }
     if (argv[0] === 'uname') return { value: { ...ok.value, stdout: 'Linux\n' } }

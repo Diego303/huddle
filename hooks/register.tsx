@@ -6,7 +6,13 @@ import type { Register } from 'claude-code'
 
 import { configurar } from '../lib/comandos/configurar.ts'
 import { directorio } from '../lib/comandos/directorio.ts'
+import { abrir } from '../lib/comandos/abrir.ts'
+import { cierre } from '../lib/comandos/cierre.ts'
+import { preguntar } from '../lib/comandos/preguntar.ts'
+import { proyecto } from '../lib/comandos/proyecto.ts'
 import { proyectos } from '../lib/comandos/proyectos.ts'
+import { refresh } from '../lib/comandos/refresh.ts'
+import { registro } from '../lib/comandos/registro.ts'
 import { esHerramientaDeAgente } from '../lib/detalle.ts'
 import {
   anotarOrigen,
@@ -54,6 +60,35 @@ export const register: Register = on => {
     await $.command.register({
       name: 'panel',
       description: 'Huddle: abre el panel de sesiones, agentes y proyectos',
+    })
+    await $.command.register({
+      name: 'refresh',
+      description: 'Huddle: actualiza git y ESTADO.md, y cuenta qué ha pasado desde la última vez',
+      argumentHint: '[solo-datos]',
+    })
+    await $.command.register({
+      name: 'proyecto',
+      description: 'Huddle: detalle de un proyecto (ficha, git, sesiones); con «tests», los ejecuta',
+      argumentHint: '<nombre> [tests]',
+    })
+    await $.command.register({
+      name: 'preguntar',
+      description: 'Huddle: pregunta a la sesión de un proyecto, en solo lectura',
+      argumentHint: '<proyecto> "<pregunta>"',
+    })
+    await $.command.register({
+      name: 'abrir',
+      description: 'Huddle: abre una pestaña con Claude Code en un proyecto',
+      argumentHint: '<proyecto>',
+    })
+    await $.command.register({
+      name: 'registro',
+      description: 'Huddle: apunta algo en el diario',
+      argumentHint: '"<texto>"',
+    })
+    await $.command.register({
+      name: 'cierre',
+      description: 'Huddle: resumen del día y próximos pasos',
     })
     await $.command.register({
       name: 'oficina',
@@ -173,6 +208,49 @@ export const register: Register = on => {
   on('command.run', { command: 'panel' }, async $ => {
     try {
       return { text: await abrirPanel($) }
+    } catch (err) {
+      return fallo(err)
+    }
+  })
+
+  on('command.run', { command: 'refresh' }, async ($, e) => {
+    try {
+      return { text: await refresh($, e.args ?? '') }
+    } catch (err) {
+      return fallo(err)
+    }
+  })
+  on('command.run', { command: 'proyecto' }, async ($, e) => {
+    try {
+      return { text: await proyecto($, e.args ?? '') }
+    } catch (err) {
+      return fallo(err)
+    }
+  })
+  on('command.run', { command: 'preguntar' }, async ($, e) => {
+    try {
+      return { text: await preguntar($, e.args ?? '') }
+    } catch (err) {
+      return fallo(err)
+    }
+  })
+  on('command.run', { command: 'abrir' }, async ($, e) => {
+    try {
+      return { text: await abrir($, e.args ?? '') }
+    } catch (err) {
+      return fallo(err)
+    }
+  })
+  on('command.run', { command: 'registro' }, async ($, e) => {
+    try {
+      return { text: await registro($, e.args ?? '') }
+    } catch (err) {
+      return fallo(err)
+    }
+  })
+  on('command.run', { command: 'cierre' }, async $ => {
+    try {
+      return { text: await cierre($) }
     } catch (err) {
       return fallo(err)
     }

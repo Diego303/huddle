@@ -5,9 +5,11 @@
 
 import type { EngineInterface } from 'claude-code'
 
-import { interpretarActividad } from './actividad.ts'
+import { interpretarActividad, interpretarActividadTotal, turnosDelDia } from './actividad.ts'
 import type { Config } from './config.ts'
 import type { EstadoSesion, Uso } from './estado.ts'
+import type { Instantanea } from './estado-md.ts'
+import type { GitCache } from './git.ts'
 import type { Casillas, Dia, Ficha } from './panel-datos.ts'
 import { casillas, interpretarFicha, seccion, siguienteAccion, usoMasReciente } from './panel-datos.ts'
 import { interpretarProyectos } from './proyectos.ts'
@@ -15,6 +17,9 @@ import { unir } from './rutas.ts'
 import { ultimosDias } from './tiempo.ts'
 
 export type FichaLeida = Ficha & { mtime: number }
+
+/** Lo que el panel usa de git-cache.json, por proyecto. */
+export type GitPanel = { rama: string | null; ahead: number; cambios: number; sucio_desde: string | null; error: string | null }
 
 /** Todo lo que el panel necesita, como datos planos (va a `$.state`). */
 export type DatosPanel = {
@@ -32,6 +37,8 @@ export type DatosPanel = {
   uso: Uso | null
   sinClasificar: number
   ultimoRefresh: number | null
+  /** De /refresh; vacío si aún no se ha hecho ninguno. */
+  git: Record<string, GitPanel>
 }
 
 type Entrada<T> = { mtime: number; valor: T }
@@ -127,6 +134,13 @@ export async function leerPanel($: EngineInterface, config: Config, desfase: num
   const dias = ultimosDias(ahora, desfase, 7)
   const turnos = new Map<string, number>(dias.map(d => [d, 0]))
   let turnosTotales = 0
+  const rutaTotal = unir(agentos, 'actividad.json')
+  const mTotal = await mtimeDe($, rutaTotal)
+  const total = mTotal === null ? null : await leerSiCambio($, rutaTotal, mTotal, interpretarActividadTotal)
+  if (total) {
+    turnosTotales += total.total
+    for (const d of dias) turnos.set(d, (turnos.get(d) ?? 0) + turnosDelDia(total, d))
+  }
   const dirActividad = unir(agentos, 'actividad')
   for (const f of await listar($, dirActividad)) {
     if (!f.name.endsWith('.json')) continue
@@ -138,6 +152,16 @@ export async function leerPanel($: EngineInterface, config: Config, desfase: num
     }
   }
 
+  // git-cache.json y ultimo-refresh.json, de /refresh
+  const rutaGit = unir(agentos, 'git-cache.json')
+  const mGit = await mtimeDe($, rutaGit)
+  const git = mGit === null ? null : await leerSiCambio($, rutaGit, mGit, json(v => ((v as GitCache)?.repos ? (v as GitCache) : null)))
+  const commits = new Map<string, number>()
+  for (const r of Object.values(git?.repos ?? {})) for (const [d, n] of Object.entries(r.commits_dia)) commits.set(d, (commits.get(d) ?? 0) + n)
+  const rutaInst = unir(agentos, 'ultimo-refresh.json')
+  const mInst = await mtimeDe($, rutaInst)
+  const inst = mInst === null ? null : await leerSiCambio($, rutaInst, mInst, json(v => (typeof (v as Instantanea)?.ms === 'number' ? (v as Instantanea) : null)))
+
   return {
     generado: ahora,
     desfase,
@@ -148,11 +172,14 @@ export async function leerPanel($: EngineInterface, config: Config, desfase: num
     fichas,
     hoy: estadoMd?.hoy ?? null,
     siguiente: estadoMd?.siguiente ?? [],
-    // Los commits llegan con /refresh (git-cache.json); hasta entonces, n/d.
-    dias: dias.map(d => ({ dia: d, turnos: turnos.get(d) ?? 0, commits: null })),
+    // Sin /refresh todavía no hay commits: n/d.
+    dias: dias.map(d => ({ dia: d, turnos: turnos.get(d) ?? 0, commits: git ? (commits.get(d) ?? 0) : null })),
     turnosTotales,
     uso: usoMasReciente([usoPropio, ...sesiones.map(s => s.uso)]),
     sinClasificar: doc?.sinClasificar.length ?? 0,
-    ultimoRefresh: null,
+    ultimoRefresh: inst?.ms ?? null,
+    git: Object.fromEntries(
+      Object.entries(git?.repos ?? {}).map(([c, r]) => [c, { rama: r.rama, ahead: r.ahead, cambios: r.cambios, sucio_desde: r.sucio_desde, error: r.error }]),
+    ),
   }
 }

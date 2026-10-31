@@ -36,3 +36,39 @@ export function interpretarActividad(json: string): ActividadSesion | null {
     return null
   }
 }
+
+/** `.agentos/actividad.json`: lo que /refresh junta de las sesiones ya cerradas. */
+export type ActividadTotal = { dias: Record<string, Record<string, number>>; total: number }
+
+export function actividadTotalVacia(): ActividadTotal {
+  return { dias: {}, total: 0 }
+}
+
+export function interpretarActividadTotal(json: string): ActividadTotal | null {
+  try {
+    const v = JSON.parse(json) as Partial<ActividadTotal>
+    if (typeof v.dias !== 'object' || v.dias === null || typeof v.total !== 'number') return null
+    return { dias: v.dias as ActividadTotal['dias'], total: v.total }
+  } catch {
+    return null
+  }
+}
+
+/** Suma una sesión cerrada al total y quita los días anteriores a `desde` (el total se conserva). */
+export function juntar(total: ActividadTotal, sesion: ActividadSesion, desde: string): ActividadTotal {
+  const dias: ActividadTotal['dias'] = {}
+  for (const [d, p] of Object.entries(total.dias)) if (d >= desde) dias[d] = { ...p }
+  let suma = 0
+  for (const [d, n] of Object.entries(sesion.dias)) {
+    suma += n
+    if (d < desde) continue
+    const p = (dias[d] ??= {})
+    p[sesion.proyecto] = (p[sesion.proyecto] ?? 0) + n
+  }
+  return { dias, total: total.total + suma }
+}
+
+/** Turnos de un día en el total (todas las sesiones cerradas). */
+export function turnosDelDia(total: ActividadTotal, dia: string): number {
+  return Object.values(total.dias[dia] ?? {}).reduce((a, b) => a + b, 0)
+}

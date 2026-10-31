@@ -63,6 +63,7 @@ function datos(cambios: Partial<DatosPanel> = {}): DatosPanel {
     uso: { cinco_horas: { pct: 64, reinicia: '2026-10-31T02:56:00.000Z' }, semana: { pct: 41, reinicia: '2026-11-05T08:00:00.000Z' }, leido: '' },
     sinClasificar: 1,
     ultimoRefresh: null,
+    git: {},
     ...cambios,
   }
 }
