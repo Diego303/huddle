@@ -172,29 +172,33 @@ Se actualiza sola: cada 2 s vuelve a leer `.agentos/web/datos.js` (una línea `w
 
 Con `HUDDLE_NO_ABRIR=1`, `/huddle web` solo te da la ruta, sin abrir el navegador.
 
-Así se ve, con los datos de ejemplo de los tests (son capturas de las pruebas con Playwright, en Edge):
+Así se ve, con datos de prueba (capturas de las pruebas con Playwright, en Edge):
 
-**Actividad**: dos sesiones atascadas, el cronograma de hoy, la bitácora y el uso por proyecto.
+**Panel**: las sesiones vivas y lo que hace cada una (dos de ellas atascadas, en rojo), el progreso por proyecto, el contexto, las alertas, la actividad de la semana, la siguiente acción y el uso de 5 h y semanal. Rex avisa de quién te espera.
+
+![Pestaña Panel](docs/capturas/web-panel.png)
+
+**Oficina isométrica**: una sala por proyecto. Quien te espera sale al pasillo con «!», y las sesiones atascadas se ven con «↻» y el monitor en rojo.
+
+![Oficina en la escena isométrica](docs/capturas/web-oficina-isometrica.png)
+
+**Torre**, en tema oscuro: una planta por proyecto, la azotea para descansar, el sótano de archivo y el ascensor, con su timbre encendido para quien te espera.
+
+![Oficina en la escena Torre, en tema oscuro](docs/capturas/web-oficina-torre-oscuro.png)
+
+**Oficina clásica** y el **detalle** de un subagente, que se abre al hacer clic en un personaje o en el árbol del Panel:
+
+![Oficina clásica, en tema oscuro](docs/capturas/web-oficina-clasica-oscuro.png)
+
+![Detalle de un subagente sobre la escena isométrica, en tema oscuro](docs/capturas/web-detalle-oscuro.png)
+
+**Actividad**: los atascos, el cronograma de hoy, la bitácora y el uso por proyecto.
 
 ![Pestaña Actividad: atascos, cronograma, bitácora y uso por proyecto](docs/capturas/web-actividad.png)
 
 **Bitácora**: el buscador encuentra, en los últimos 7 días, un fichero editado hace tres.
 
 ![Bitácora con la búsqueda «billing» resaltada](docs/capturas/web-bitacora-busqueda.png)
-
-**Oficina isométrica**: una sala por proyecto; quien te espera sale al pasillo con «!», y las sesiones atascadas se ven con «↻» y el monitor en rojo.
-
-![Oficina en la escena isométrica](docs/capturas/web-oficina-isometrica.png)
-
-**Torre**, en tema oscuro: una planta por proyecto, la azotea para descansar, el sótano de archivo y el ascensor.
-
-![Oficina en la escena Torre, en tema oscuro](docs/capturas/web-oficina-torre-oscuro.png)
-
-**Oficina clásica** y el **detalle** de un subagente, que se abre al hacer clic en un personaje o en el árbol del Panel:
-
-![Oficina clásica con dos sesiones atascadas, en tema oscuro](docs/capturas/web-oficina-clasica-oscuro.png)
-
-![Detalle de un subagente sobre la escena isométrica, en tema oscuro](docs/capturas/web-detalle-oscuro.png)
 
 **Escenas de la Oficina.** En la web, la Oficina tiene tres escenas, que se eligen en su cabecera, junto a los modos sesiones y agentes:
 
