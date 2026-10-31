@@ -16,15 +16,12 @@ const AHORA = Date.parse('2026-10-31T00:46:00+01:00')
 function datos(c: Partial<DatosPanel>): DatosPanel {
   return {
     generado: AHORA, desfase: 60, general_dir: '/g', raiz: '/r', inactiva_min: 30, sesiones: [], fichas: [], hoy: null, siguiente: [],
-    dias: [], turnosTotales: 0, uso: null, sinClasificar: 0, ultimoRefresh: null, git: {}, usoEstimado: null, rex_estacional: true, ...c,
+    dias: [], turnosTotales: 0, uso: null, sinClasificar: 0, ultimoRefresh: null, git: {}, usoEstimado: null, rex_estacional: true, enSeguimiento: 0, carpetasTotal: 0, ...c,
   }
 }
 
 function todo(d: DatosPanel): string {
-  return componerPanel(d, 89, 50, 0, AHORA)
-    .flatMap(b => (b.tipo === 'lineas' ? b.lineas : b.lado))
-    .map(texto)
-    .join('\n')
+  return componerPanel(d, 89, 50, 0, AHORA).map(texto).join('\n')
 }
 
 describe('alertas de git', () => {
@@ -38,18 +35,18 @@ describe('alertas de git', () => {
     expect(alertasGit(git, AHORA)).toEqual([
       { texto: 'struo: CI en rojo', nivel: 'grave' },
       { texto: 'struo: 3 commits sin push', nivel: 'aviso' },
-      { texto: 'web: cambios sin commitear desde hace 4 días', nivel: 'aviso' },
+      { texto: 'web: sin commitear hace 4 días', nivel: 'aviso' },
     ])
   })
 
   test('el panel las enseña y la siguiente acción por reglas añade el push', () => {
     const t = todo(datos({ sinClasificar: 2, git: Object.fromEntries(Object.entries(git).map(([k, v]) => [k, { rama: 'main', error: null, ci: null, ...v }])) }))
     expect(t).toContain('▲ struo: CI en rojo')
-    expect(t).toContain('▲ web: cambios sin commitear desde hace 4 días')
+    expect(t).toContain('▲ web: sin commitear hace 4 días')
     expect(t).toContain('1. Push en struo (3 commits sin subir)')
-    const orden = t.split('\n').filter(l => l.startsWith('▲'))
-    expect(orden[0]).toBe('▲ struo: CI en rojo'.padEnd(89))
-    expect(orden.at(-1)?.trimEnd()).toBe('▲ 2 carpeta(s) sin clasificar en PROYECTOS.md')
+    const alertas = t.split('\n').map(l => /▲ ([^│]+?)\s*│\s*$/.exec(l)?.[1]).filter((x): x is string => x !== undefined)
+    expect(alertas[0]).toBe('struo: CI en rojo')
+    expect(alertas.at(-1)).toBe('2 carpetas sin clasificar')
   })
 
   test('orden de las reglas: te espera, contexto alto, push', () => {
@@ -73,13 +70,16 @@ describe('alertas de git', () => {
 
 describe('uso', () => {
   test('el dato oficial manda; sin él y sin límites, n/d', () => {
-    expect(todo(datos({}))).toContain('Sesión 5 h n/d · configúralo en config.json')
+    const t = todo(datos({}))
+    expect(t).toContain('╭─ Sesión 5 h ')
+    expect(t).toContain('n/d · configúralo en config.json')
   })
 
   test('sin dato oficial pero con límites: ≈, nunca un número sin marcar', () => {
     const t = todo(datos({ usoEstimado: { cinco_horas: 42, semana: null, reinicioSemana: null } }))
-    expect(t).toContain('≈42% · ventana móvil de 5 h')
-    expect(t).toContain('Semana n/d')
+    expect(t).toContain('≈42%')
+    expect(t).toContain('ventana móvil de 5 h')
+    expect(t).toMatch(/╭─ Semana ─+╮[\s\S]*n\/d/)
   })
 
   test('tokens por hora, ventana de 5 h y reinicio semanal', () => {

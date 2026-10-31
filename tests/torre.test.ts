@@ -61,8 +61,8 @@ describe('la torre', () => {
 
     for (const surface of ['terminal', 'desktop'] as const) {
       const ui = await $.ui.mount({ ...props(89, 46), surface })
-      for (const t of [/Ejecutándose ahora/, /struo · feat-x/, /permiso: Write/, /GENERAL · torre/, /ola 3 · 1\/2/, /Tareas hoy/, /Aprobar el permiso de struo/, /te espera/]) {
-        expect(await ui.find({ type: 'Text', text: t })).toBeDefined()
+      for (const t of [/Ejecutándose ahora/, /struo · feat-x/, /permiso: Write/, /GENERAL · torre/, /ola 3 · 1\/2/, /Tareas hoy/, /Aprobar el permiso de struo/, /te espera/, /^ Panel $/, /^ Oficina $/]) {
+        expect(await ui.find({ type: 'Text', text: t }), `${surface}: ${t}`).toBeDefined()
       }
       await ui.unmount()
     }
@@ -72,12 +72,13 @@ describe('la torre', () => {
     await ui.press({ key: 'vista-oficina' })
     await ui.unmount()
     const oficina = await $.ui.mount({ ...props(89, 46), surface: 'terminal' })
-    expect(await oficina.find({ type: 'Text', text: /huddle · oficina/ })).toBeDefined()
-    expect(await oficina.find({ type: 'Text', text: /\[Sesiones\]/ })).toBeDefined()
+    expect(await oficina.find({ type: 'Text', text: / oficina/ })).toBeDefined()
+    expect(await oficina.find({ type: 'Text', text: /^ Sesiones $/ })).toBeDefined()
+    expect(await oficina.find({ type: 'Text', text: /╭─ struo / })).toBeDefined()
     await oficina.press({ key: 'modo-agentes' })
     await oficina.unmount()
     const agentes = await $.ui.mount({ ...props(89, 46), surface: 'desktop' })
-    expect(await agentes.find({ type: 'Text', text: /\[Agentes\]/ })).toBeDefined()
+    expect(await agentes.find({ type: 'Text', text: /^ Agentes $/ })).toBeDefined()
     expect(await agentes.find({ type: 'Text', text: /STR-lead-01/ })).toBeDefined()
     await agentes.press({ key: 'vista-panel' })
     await agentes.unmount()
@@ -86,7 +87,7 @@ describe('la torre', () => {
     const r = await $.command.run({ command: 'oficina', args: 'sesiones', origin: { kind: 'composer' }, presentation: { isFullscreen: true, columns: 200 } })
     expect(r.text).toBe('Oficina · sesiones.')
     const otra = await $.ui.mount({ ...props(89, 46), surface: 'terminal' })
-    expect(await otra.find({ type: 'Text', text: /\[Sesiones\]/ })).toBeDefined()
+    expect(await otra.find({ type: 'Text', text: /struo·feat-x/ })).toBeDefined()
     await otra.unmount()
     const p = await $.command.run({ command: 'panel', args: '', origin: { kind: 'composer' }, presentation: { isFullscreen: true, columns: 200 } })
     expect(p.text).toBe('Panel.')

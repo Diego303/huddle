@@ -1,8 +1,5 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import type { EstadoSesion } from '../lib/estado.ts'
-import { estadoInicial } from '../lib/estado.ts'
-import type { DatosPanel } from '../lib/lector.ts'
 import {
   bocadillo,
   casillas,
@@ -15,68 +12,15 @@ import {
   siguienteAccion,
   vistaSesiones,
 } from '../lib/panel-datos.ts'
-import { ancho, texto } from '../mod/lienzo.ts'
-import { componerPanel, duracion, fechaCabecera, reinicio } from '../mod/panel.ts'
-import { adornoDe, COLUMNAS, FILAS, fotograma, PALETA } from '../mod/rex.ts'
+import { anchoGrande, grande } from '../mod/digitos.ts'
+import type { Linea } from '../mod/lienzo.ts'
+import { ancho, barraSuave, columnaVertical, FONDO_TARJETA, PISTA, tarjeta, texto } from '../mod/lienzo.ts'
+import { cabecera, componerPanel, duracion, fechaCabecera, modoDe, reinicio, semana } from '../mod/panel.ts'
+import { adornoDe, comoLineas, fotograma, PALETA, tamano } from '../mod/rex.ts'
+import { AHORA, datos, sesion, SESIONES } from './ayuda/ejemplo.ts'
 
-const AHORA = Date.parse('2026-10-31T00:46:00+01:00')
-
-function sesion(id: string, cambios: Partial<EstadoSesion>): EstadoSesion {
-  return {
-    ...estadoInicial({ session_id: id, tipo: 'proyecto', proyecto: 'struo', codigo: 'STR', cwd: '/r/struo', rama: 'main', ahora: '2026-10-31T00:10:00+01:00' }),
-    ultimo_evento: '2026-10-31T00:45:00+01:00',
-    ...cambios,
-  }
-}
-
-const SESIONES: EstadoSesion[] = [
-  sesion('a', {
-    rama: 'feat-auth',
-    estado: 'trabajando',
-    detalle: 'editando auth.ts',
-    contexto_pct: 48,
-    agentes: [
-      { tool_use_id: 'u1', agent_id: 'x1', tipo: 'explore', descripcion: 'usos de token', inicio: '2026-10-31T00:20:00+01:00', estado: 'trabajando', detalle: 'Bash · rg' },
-    ],
-  }),
-  sesion('b', { rama: 'feat-export', estado: 'te_espera', detalle: 'permiso: Write', te_espera_desde: '2026-10-31T00:38:00+01:00', contexto_pct: 83, inicio: '2026-10-31T00:20:00+01:00' }),
-  sesion('c', { proyecto: 'proyecto-b', codigo: 'PRB', rama: 'main', estado: 'en_pausa', contexto_pct: 31 }),
-  sesion('d', { proyecto: 'proyecto-c', codigo: 'PRC', estado: 'en_pausa', ultimo_evento: '2026-10-30T21:00:00+01:00' }),
-]
-
-function datos(cambios: Partial<DatosPanel> = {}): DatosPanel {
-  return {
-    generado: AHORA,
-    desfase: 60,
-    general_dir: '/r/GENERAL',
-    raiz: '/mnt/d/GitHub',
-    inactiva_min: 30,
-    sesiones: SESIONES,
-    fichas: [
-      { carpeta: 'struo', codigo: 'STR', fase: 'ola 3', tareas: { hechas: 5, total: 7 }, mtime: 0 },
-      { carpeta: 'proyecto-b', codigo: 'PRB', fase: 'migración', tareas: { hechas: 0, total: 0 }, mtime: 0 },
-    ],
-    hoy: { hechas: 5, total: 7 },
-    siguiente: ['Aprobar GATE#1 en struo/feat-export'],
-    dias: ['2026-10-25', '2026-10-26', '2026-10-27', '2026-10-28', '2026-10-29', '2026-10-30', '2026-10-31'].map((dia, i) => ({ dia, turnos: i * 3, commits: null })),
-    turnosTotales: 1234,
-    uso: { cinco_horas: { pct: 64, reinicia: '2026-10-31T02:56:00.000Z' }, semana: { pct: 41, reinicia: '2026-11-05T08:00:00.000Z' }, leido: '' },
-    sinClasificar: 1,
-    ultimoRefresh: null,
-    git: {},
-    usoEstimado: null,
-    rex_estacional: true,
-    ...cambios,
-  }
-}
-
-function textoPanel(w: number, h = 48, d: DatosPanel | null = datos()): string[] {
-  const out: string[] = []
-  for (const b of componerPanel(d, w, h, 0, AHORA)) {
-    if (b.tipo === 'lineas') out.push(...b.lineas.map(texto))
-    else out.push(...b.lado.map(texto))
-  }
-  return out
+function texto2(lineas: readonly Linea[]): string {
+  return lineas.map(texto).join('\n')
 }
 
 describe('datos del panel', () => {
@@ -128,117 +72,203 @@ describe('datos del panel', () => {
   })
 })
 
+describe('piezas del lienzo', () => {
+  test('1 · tarjeta con esquinas redondeadas, título en el borde y fondo propio', () => {
+    const t = tarjeta([[{ t: 'hola' }]], { titulo: 'Rex', derecha: [{ t: 'alerta' }], ancho: 20 })
+    expect(t.map(texto)).toEqual(['╭─ Rex ─── alerta ─╮', `│ hola${' '.repeat(12)} │`, `╰${'─'.repeat(18)}╯`])
+    for (const l of t) expect(ancho(l)).toBe(20)
+    expect(t[0]?.find(x => x.t === 'Rex')?.c).toBe('#F0997B')
+    // Todo el interior lleva el fondo de la tarjeta; el borde, el del terminal.
+    expect(t[1]?.slice(1, -1).every(x => x.f === FONDO_TARJETA)).toBe(true)
+    expect(t[1]?.[0]?.f).toBeUndefined()
+  })
+
+  test('2 · dígitos de 3×3 con ▀ █ ▄', () => {
+    expect(grande('30', '#fff').map(texto2l => texto2l[0]?.t)).toEqual(['▀▀█ █▀█', ' ▀█ █ █', '▀▀▀ ▀▀▀'])
+    expect(anchoGrande('71')).toBe(7)
+    expect([...grande('1234567890-', '#fff').map(l => l[0]?.t).join('')].every(c => ' ▀█▄'.includes(c))).toBe(true)
+  })
+
+  test('3 · barras suaves en octavos sobre una pista; sin dato, la pista vacía', () => {
+    expect(texto(barraSuave(50, 10, '#f00'))).toBe('█████     ')
+    expect(texto(barraSuave(56.25, 10, '#f00'))).toBe('█████▋    ')
+    expect(texto(barraSuave(100, 4, '#f00'))).toBe('████')
+    expect(barraSuave(30, 10, '#f00').every(x => x.f === PISTA)).toBe(true)
+    expect(texto(barraSuave(null, 6, '#f00'))).toBe('      ')
+    expect(texto(barraSuave(0, 6, '#f00'))).not.toContain('·')
+  })
+
+  test('5 · columnas verticales de 4 filas; sin valor, un ▁ apagado', () => {
+    expect(columnaVertical(32, 32, 4).map(c => c.ch)).toEqual(['█', '█', '█', '█'])
+    expect(columnaVertical(1, 4, 4).map(c => c.ch)).toEqual([' ', ' ', ' ', '█'])
+    expect(columnaVertical(3, 8, 4).map(c => c.ch)).toEqual([' ', ' ', '▄', '█'])
+    expect(columnaVertical(0, 4, 4)).toEqual([
+      { ch: ' ', apagada: true },
+      { ch: ' ', apagada: true },
+      { ch: ' ', apagada: true },
+      { ch: '▁', apagada: true },
+    ])
+    expect(columnaVertical(null, 4, 4)[3]).toEqual({ ch: '▁', apagada: true })
+  })
+})
+
 describe('Rex', () => {
-  test('mide 24×10 y cada estado se distingue', () => {
+  test('4 · a 1× ocupa 14×5 celdas (10 del sprite y 4 para adornos); a 2×, 28×10', () => {
+    expect(tamano(1)).toEqual({ columnas: 14, filas: 5 })
+    expect(tamano(2)).toEqual({ columnas: 28, filas: 10 })
     for (const e of ['trabajando', 'durmiendo', 'alerta', 'celebrando'] as const) {
-      const f = fotograma(e, 0)
-      expect(f).toHaveLength(FILAS)
-      for (const fila of f) expect(fila).toHaveLength(COLUMNAS)
+      for (const k of [1, 2] as const) {
+        const f = fotograma(e, 0, null, k)
+        expect(f).toHaveLength(tamano(k).filas)
+        for (const fila of f) expect(fila).toHaveLength(tamano(k).columnas)
+      }
     }
     const caracteres = (e: Parameters<typeof fotograma>[0], n = 0) => fotograma(e, n).flat().map(c => c.ch).join('')
     expect(caracteres('alerta')).toContain('!')
     expect(caracteres('celebrando')).toContain('✦')
     expect(caracteres('durmiendo')).toContain('━')
     expect(caracteres('durmiendo').toLowerCase()).toContain('z')
-    // Despierto, el ojo es un píxel oscuro; dormido, una línea.
-    expect(fotograma('trabajando', 0)[1]?.[10]?.bg).toBe(PALETA.ojo)
-    // Trabajando se balancea: los dos fotogramas son distintos.
     expect(JSON.stringify(fotograma('trabajando', 0))).not.toBe(JSON.stringify(fotograma('trabajando', 1)))
+  })
+
+  test('una media celda pintada solo abajo es ▄ (nunca ▀ con el primer plano por defecto)', () => {
+    for (const k of [1, 2] as const) {
+      for (const fila of fotograma('durmiendo', 0, 'calabaza', k)) {
+        for (const c of fila) if (c.ch === '▀') expect(c.fg).not.toBe(0x01000000)
+      }
+    }
+  })
+
+  test('lo transparente toma el fondo de la tarjeta', () => {
+    const l = comoLineas(fotograma('durmiendo', 0))
+    expect(l.every(fila => fila.every(x => x.f === undefined || x.f.startsWith('#')))).toBe(true)
+    const t = tarjeta(l, { ancho: 20 })
+    expect(t.slice(1, -1).every(fila => fila.slice(1, -1).every(x => x.f !== undefined))).toBe(true)
+  })
+
+  test('capricho estacional: calabaza el 31 de octubre, gorro en diciembre', () => {
+    expect(adornoDe(10, 31, true)).toBe('calabaza')
+    expect(adornoDe(12, 5, true)).toBe('gorro')
+    expect(adornoDe(10, 30, true)).toBeNull()
+    expect(adornoDe(10, 31, false)).toBeNull()
+    const calabaza = fotograma('durmiendo', 0, 'calabaza', 1)
+    expect(calabaza[4]?.slice(11).map(c => c.fg)).toEqual([PALETA.calabaza, PALETA.calabaza, PALETA.calabaza])
+    const gorro = fotograma('trabajando', 0, 'gorro', 1)
+    expect(gorro[0]?.slice(4, 8).every(c => c.fg === PALETA.rojo)).toBe(true)
   })
 })
 
 describe('composición del panel', () => {
-  test('compacta a 89 columnas (acoplado): todas las secciones, nada más ancho', () => {
-    const l = textoPanel(89)
-    const todo = l.join('\n')
-    for (const t of [
-      'huddle · /mnt/d/GitHub',
-      'sáb 31 oct · 00:46 · sin /refresh',
-      'Sesiones 3/4 · Te esperan 1 · Agentes 1 +1 sub',
-      'Tareas hoy 71%',
-      '“¡feat-export te espera!”',
-      'racha 6 días · nivel 13',
-      'Ejecutándose ahora',
-      'STR-explore-01',
-      'struo · feat-export',
-      'permiso: Write',
-      'inactiva',
-      'Progreso por proyecto',
-      'ola 3 · 5/7',
-      '71%',
-      'Contexto por sesión',
-      '83%',
-      '▲ feat-export: contexto 83 %, compactar',
-      '▲ feat-export: te espera desde hace 8 min',
-      'Actividad 7 días',
-      'L  M  X  J  V  S  D'.split(' ').filter(Boolean)[0]!,
-      '1. Aprobar GATE#1 en struo/feat-export',
-      'Sesión 5 h',
-      '64% · reinicia en 3h 10m',
-      '41% · reinicia jue 09:00',
-      '1 sin clasificar',
-    ]) {
-      expect(todo).toContain(t)
-    }
-    const conRex = componerPanel(datos(), 89, 48, 0, AHORA)
-    for (const b of conRex) {
-      if (b.tipo === 'lineas') for (const x of b.lineas) expect(ancho(x)).toBe(89)
-      else for (const x of b.lado) expect(ancho(x)).toBeLessThanOrEqual(b.ladoAncho)
+  test('6 · compacto en 88: KPIs 4×1, Rex + ejecución, 2 columnas y uso al pie; nada más ancho', () => {
+    const l = componerPanel(datos(), 88, 44, 0, AHORA)
+    for (const x of l) expect(ancho(x)).toBe(88)
+    const t = l.map(texto)
+    const fila0 = t[0] ?? ''
+    for (const titulo of ['Sesiones', 'Te esperan', 'Agentes', 'Tareas hoy']) expect(fila0).toContain(`╭─ ${titulo} `)
+    expect(fila0.match(/╭/g)).toHaveLength(4)
+    const conRex = t.find(x => x.includes('╭─ Rex '))
+    expect(conRex).toContain('╭─ Ejecutándose ahora ')
+    expect(t.find(x => x.includes('╭─ Progreso por proyecto '))).toContain('╭─ Contexto por sesión ')
+    expect(t.find(x => x.includes('╭─ Actividad '))).toContain('╭─ Siguiente acción ')
+    expect(t.find(x => x.includes('╭─ Sesión 5 h '))).toContain('╭─ Semana ')
+    // El orden de las filas.
+    const i = (k: string) => t.findIndex(x => x.includes(k))
+    expect(i('╭─ Sesiones')).toBeLessThan(i('╭─ Rex'))
+    expect(i('╭─ Rex')).toBeLessThan(i('╭─ Progreso'))
+    expect(i('╭─ Progreso')).toBeLessThan(i('╭─ Alertas'))
+    expect(i('╭─ Alertas')).toBeLessThan(i('╭─ Actividad'))
+    expect(i('╭─ Actividad')).toBeLessThan(i('╭─ Sesión 5 h'))
+    expect(l.length).toBeLessThanOrEqual(44)
+    const todo = t.join('\n')
+    for (const k of ['1 trab · 1 pausa', 'feat-export · 8m', '+1 sub', '5/7', '“¡feat-export te', 'racha 6 días · nivel 13', 'STR-explore-01', '3 de 37', '83%', '▲ feat-export: contexto 83 %, compactar', '1. Aprobar GATE#1 en struo/feat-export', 'reinicia en 3h 10m', 'reinicia jue 09:00', '1 sin clasificar']) {
+      expect(todo).toContain(k)
     }
   })
 
-  test('sin datos de uso ni ficheros muestra n/d, no inventa', () => {
-    const todo = textoPanel(89, 48, datos({ uso: null, hoy: null, siguiente: [], fichas: [], sesiones: [] })).join('\n')
-    expect(todo).toContain('Sesión 5 h n/d · configúralo en config.json')
-    expect(todo).toContain('Tareas hoy —')
-    expect(todo).toContain('(ninguna sesión abierta)')
-    expect(todo).toContain('nada pendiente')
-    expect(textoPanel(89, 48, null).join('\n')).toContain('Leyendo la carpeta de control')
+  test('6 · ancho en 196: la misma rejilla con más aire, sin la mitad derecha vacía; Rex a 2× si sobra alto', () => {
+    const l = componerPanel(datos(), 196, 60, 0, AHORA)
+    for (const x of l) expect(ancho(x)).toBe(196)
+    const t = l.map(texto)
+    // Ninguna línea con contenido acaba en un tramo vacío de más de media pantalla.
+    for (const x of t) expect(/ {98,}$/.test(x)).toBe(false)
+    expect(t.filter(x => x.includes('╭─ Rex ')).length).toBe(1)
+    const rex = t.findIndex(x => x.includes('╭─ Rex '))
+    const fin = t.findIndex((x, j) => j > rex && x.startsWith('╰'))
+    expect(fin - rex - 1).toBeGreaterThanOrEqual(10)
+    expect(t.join('\n')).toContain('● 1 trabajando')
+    // Sin alto para el 2×, Rex se queda a 1×.
+    const bajo = componerPanel(datos(), 196, 40, 0, AHORA).map(texto)
+    const r = bajo.findIndex(x => x.includes('╭─ Rex '))
+    expect(bajo.findIndex((x, j) => j > r && x.startsWith('╰')) - r - 1).toBeLessThan(10)
+  })
+
+  test('estrecho (< 70): KPIs 2×2 y una tarjeta por fila', () => {
+    expect(modoDe(60)).toBe('estrecho')
+    expect(modoDe(88)).toBe('compacto')
+    expect(modoDe(91)).toBe('ancho')
+    const l = componerPanel(datos(), 60, 80, 0, AHORA)
+    for (const x of l) expect(ancho(x)).toBe(60)
+    const t = l.map(texto)
+    expect(t[0]?.match(/╭/g)).toHaveLength(2)
+  })
+
+  test('5 · actividad de lunes a domingo, con hoy resaltado y lo futuro apagado', () => {
+    const dias = semana(datos(), AHORA)
+    expect(dias.map(x => x.letra).join(' ')).toBe('L M X J V S D')
+    expect(dias.map(x => x.dia)).toEqual(['2026-10-26', '2026-10-27', '2026-10-28', '2026-10-29', '2026-10-30', '2026-10-31', '2026-11-01'])
+    expect(dias.find(x => x.hoy)?.letra).toBe('S')
+    expect(dias[6]).toMatchObject({ turnos: null, commits: null })
+    expect(dias[0]).toMatchObject({ turnos: 4, commits: 2 })
+    const t = componerPanel(datos(), 88, 44, 0, AHORA).map(texto)
+    expect(t.some(x => /L +M +X +J +V +S +D/.test(x))).toBe(true)
+  })
+
+  test('7 · estados vacíos: forma a cero, «0 de 37 en seguimiento · /proyectos» y eje apagado', () => {
+    const vacio = datos({ fichas: [], enSeguimiento: 0, sesiones: [], dias: [], hoy: null, siguiente: [], uso: null, git: {} })
+    const t = componerPanel(vacio, 88, 44, 0, AHORA).map(texto)
+    const todo = t.join('\n')
+    expect(todo).toContain('0 de 37 en seguimiento · /proyectos')
+    expect(t.filter(x => x.includes('0%')).length).toBeGreaterThanOrEqual(3)
+    expect(t.some(x => /▁▁ +▁▁ +▁▁ +▁▁ +▁▁ +▁▁ +▁▁/.test(x))).toBe(true)
+    expect(todo).toContain('commits n/d')
+    expect(todo).toContain('n/d · configúralo en config.json')
+    expect(todo).toContain('sin tareas')
+    expect(todo).toContain('nadie espera')
+    expect(todo).toContain('ninguna sesión abierta')
+    expect(componerPanel(null, 88, 44, 0, AHORA).map(texto).join('')).toContain('Leyendo la carpeta de control')
+  })
+
+  test('3 · contexto por umbral: azul < 60, ámbar 60–80, rojo ≥ 80', () => {
+    const conPct = (p: number) => datos({ sesiones: [sesion('a', { estado: 'trabajando', contexto_pct: p })] })
+    const colorDe = (p: number) => {
+      const l = componerPanel(conPct(p), 88, 44, 0, AHORA).find(x => texto(x).includes('struo·main') && texto(x).includes(`${p}%`)) ?? []
+      const desde = l.findIndex(x => x.t.includes('struo·main'))
+      return l.slice(desde).find(x => x.t.includes('█'))?.c
+    }
+    expect(colorDe(48)).toBe('#378ADD')
+    expect(colorDe(70)).toBe('#EF9F27')
+    expect(colorDe(85)).toBe('#E24B4A')
   })
 
   test('sin «Siguiente acción» en ESTADO.md, sale por reglas', () => {
-    const todo = textoPanel(89, 48, datos({ siguiente: [] })).join('\n')
-    expect(todo).toContain('(por reglas)')
-    expect(todo).toContain('1. Atender struo · feat-export: permiso: Write')
+    const todo = componerPanel(datos({ siguiente: [] }), 88, 44, 0, AHORA).map(texto).join('\n')
+    expect(todo).toContain('por reglas')
+    expect(todo).toContain('1. Atender struo · feat-export:')
   })
 
-  test('ancha (≥ 100 columnas): dos columnas, sin pasarse de ancho', () => {
-    const bloques = componerPanel(datos(), 140, 50, 0, AHORA)
-    for (const b of bloques) if (b.tipo === 'lineas') for (const x of b.lineas) expect(ancho(x)).toBe(140)
-    const todo = textoPanel(140, 50).join('\n')
-    expect(todo).toContain('│')
-    expect(todo).toContain('Progreso por proyecto')
-  })
-
-  test('formatos de fecha y duración', () => {
+  test('cabecera, fechas y duraciones', () => {
+    expect(texto(cabecera(datos(), AHORA, 70))).toContain('huddle · /mnt/d/GitHub')
+    expect(texto(cabecera(datos(), AHORA, 70))).toContain('refresh hace 2m')
+    expect(ancho(cabecera(datos(), AHORA, 70))).toBe(70)
     expect(fechaCabecera(AHORA, 60)).toBe('sáb 31 oct · 00:46')
     expect(duracion(130)).toBe('2h 10m')
     expect(duracion(0.5)).toBe('ahora')
     expect(reinicio('2026-10-31T02:56:00.000Z', AHORA, 60)).toBe('reinicia en 3h 10m')
     expect(reinicio(null, AHORA, 60)).toBe('reinicio n/d')
   })
-})
 
-describe('capricho estacional de Rex', () => {
-  test('calabaza el 31 de octubre, gorro en diciembre y nada si se apaga', () => {
-    expect(adornoDe(10, 31, true)).toBe('calabaza')
-    expect(adornoDe(12, 5, true)).toBe('gorro')
-    expect(adornoDe(10, 30, true)).toBeNull()
-    expect(adornoDe(10, 31, false)).toBeNull()
-    const calabaza = fotograma('durmiendo', 0, 'calabaza')
-    expect(calabaza[9]?.slice(20).map(c => c.fg)).toEqual([PALETA.calabaza, PALETA.calabaza, PALETA.calabaza, PALETA.calabaza])
-    const gorro = fotograma('trabajando', 0, 'gorro')
-    expect(gorro[0]?.slice(8, 16).every(c => c.fg === PALETA.rojo)).toBe(true)
-    expect(gorro[0]?.[16]).toMatchObject({ ch: '▗', fg: PALETA.blanco })
-    expect(gorro).toHaveLength(FILAS)
-  })
-
-  test('el panel lo pone según la fecha local y la config', () => {
-    const conRex = (rex_estacional: boolean, ahora: number) =>
-      componerPanel(datos({ rex_estacional }), 89, 48, 0, ahora).find(b => b.tipo === 'rex')
-    const halloween = conRex(true, AHORA)
-    expect(halloween?.tipo === 'rex' && halloween.celdas[9]?.[21]?.fg).toBe(PALETA.calabaza)
-    const apagado = conRex(false, AHORA)
-    expect(apagado?.tipo === 'rex' && apagado.celdas[9]?.[21]?.fg).not.toBe(PALETA.calabaza)
+  test('el disfraz de Rex depende de la fecha local y de la config', () => {
+    const conRex = (rex_estacional: boolean) => texto2(componerPanel(datos({ rex_estacional, sesiones: [] }), 88, 44, 0, AHORA))
+    expect(conRex(true)).not.toBe(conRex(false))
   })
 })

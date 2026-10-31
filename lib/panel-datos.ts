@@ -232,7 +232,7 @@ export function alertasGit(git: Readonly<Record<string, GitAlerta>>, ahora: numb
     if (r.ahead > 0) a.push({ texto: `${p}: ${r.ahead} commit${r.ahead === 1 ? '' : 's'} sin push`, nivel: 'aviso' })
     const desde = r.sucio_desde ? Date.parse(r.sucio_desde) : Number.NaN
     if (r.cambios > 0 && Number.isFinite(desde) && ahora - desde > TRES_DIAS) {
-      a.push({ texto: `${p}: cambios sin commitear desde hace ${Math.floor((ahora - desde) / 86_400_000)} días`, nivel: 'aviso' })
+      a.push({ texto: `${p}: sin commitear hace ${Math.floor((ahora - desde) / 86_400_000)} días`, nivel: 'aviso' })
     }
   }
   return a
@@ -245,9 +245,9 @@ export function alertasBasicas(vistas: readonly SesionVista[], sinClasificar: nu
     if (v.estado === 'inactiva') continue
     const nombre = v.s.tipo === 'proyecto' ? (v.s.rama ?? v.s.proyecto) : v.s.proyecto
     if (v.s.contexto_pct !== null && v.s.contexto_pct >= 80) a.push({ texto: `${nombre}: contexto ${v.s.contexto_pct} %, compactar`, nivel: 'grave' })
-    if (v.esperaMin !== null && v.esperaMin > 5) a.push({ texto: `${nombre}: te espera desde hace ${Math.round(v.esperaMin)} min`, nivel: 'aviso' })
+    if (v.esperaMin !== null && v.esperaMin > 5) a.push({ texto: `${nombre}: espera hace ${Math.round(v.esperaMin)} min`, nivel: 'aviso' })
   }
-  if (sinClasificar > 0) a.push({ texto: `${sinClasificar} carpeta(s) sin clasificar en PROYECTOS.md`, nivel: 'aviso' })
+  if (sinClasificar > 0) a.push({ texto: `${sinClasificar} carpeta${sinClasificar === 1 ? '' : 's'} sin clasificar`, nivel: 'aviso' })
   return a
 }
 

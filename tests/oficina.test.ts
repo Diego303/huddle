@@ -3,9 +3,10 @@ import { describe, expect, test } from 'claude-code/testing'
 import type { EstadoSesion } from '../lib/estado.ts'
 import { estadoInicial } from '../lib/estado.ts'
 import type { DatosPanel } from '../lib/lector.ts'
+import { datos as ejemplo } from './ayuda/ejemplo.ts'
 import { vistaSesiones } from '../lib/panel-datos.ts'
 import { ancho, texto } from '../mod/lienzo.ts'
-import { ANCHO_EMPLEADO, colocarSalas, componerOficina, salas, sprite } from '../mod/oficina.ts'
+import { ALTO_SPRITE, ANCHO_EMPLEADO, ANCHO_SPRITE, colocarSalas, colorPantalla, componerOficina, pixeles, resumenOficina, salas, sprite } from '../mod/oficina.ts'
 
 const AHORA = Date.parse('2026-10-31T00:46:00+01:00')
 
@@ -32,11 +33,8 @@ const SESIONES = [
   sesion('i', { proyecto: 'proyecto-c', codigo: 'PRC', ultimo_evento: '2026-10-30T21:00:00+01:00' }),
 ]
 
-function datos(sesiones = SESIONES): DatosPanel {
-  return {
-    generado: AHORA, desfase: 60, general_dir: '/g', raiz: '/r', inactiva_min: 30, sesiones, fichas: [], hoy: null, siguiente: [],
-    dias: [], turnosTotales: 0, uso: null, sinClasificar: 0, ultimoRefresh: null, git: {}, usoEstimado: null, rex_estacional: true,
-  }
+function datos(c: Partial<DatosPanel> = {}): DatosPanel {
+  return ejemplo({ sesiones: SESIONES, ...c })
 }
 
 describe('oficina', () => {
@@ -57,42 +55,53 @@ describe('oficina', () => {
     ])
   })
 
-  test('cada estado tiene su postura y anima', () => {
+  test('9 · cada estado tiene su postura, anima y lleva su color en la pantalla', () => {
     const base = { etiqueta: 'x', actividad: 'y', camiseta: '#D85A30' }
     const t = (e: Parameters<typeof sprite>[0], n = 0) => sprite(e, n).map(texto).join('\n')
-    expect(t({ ...base, estado: 'te_espera' })).toContain('\\o!')
+    expect(t({ ...base, estado: 'te_espera' })).toContain('!')
     expect(t({ ...base, estado: 'te_espera' }, 1)).not.toContain('!')
     expect(t({ ...base, estado: 'trabajando' })).not.toBe(t({ ...base, estado: 'trabajando' }, 1))
     expect(t({ ...base, estado: 'en_pausa' })).toContain('z')
     for (const e of ['trabajando', 'te_espera', 'en_pausa', 'inactiva'] as const) {
-      expect(sprite({ ...base, estado: e }, 0)).toHaveLength(3)
+      const sp = sprite({ ...base, estado: e }, 0)
+      expect(sp).toHaveLength(ALTO_SPRITE)
+      for (const l of sp) expect(ancho(l)).toBe(ANCHO_SPRITE)
+      // La pantalla (x 9-11, filas 2-3 de píxeles) lleva el color del estado.
+      expect(pixeles({ ...base, estado: e }, 0).px[2]?.[10]).toBe(colorPantalla(e, 0)[0])
     }
+    expect(colorPantalla('trabajando', 0)[0]).toBe('#5DCAA5')
+    expect(colorPantalla('te_espera', 0)[0]).toBe('#EF9F27')
+    expect(colorPantalla('inactiva', 0)[0]).not.toBe(colorPantalla('en_pausa', 0)[0])
   })
 
-  test('las salas caben en el ancho; una de más de 4 empleados ocupa todo', () => {
+  test('9 · las salas llenan el ancho en rejilla, con varias mesas por fila', () => {
     const v = vistaSesiones(SESIONES, AHORA, 30)
-    for (const w of [89, 140]) {
-      for (const l of colocarSalas(salas(v, 'agentes'), w, 0)) expect(ancho(l)).toBe(w)
+    for (const w of [88, 140, 196]) {
+      const l = colocarSalas(salas(v, 'agentes'), w, 0)
+      for (const x of l) expect(ancho(x)).toBe(w)
+      // Ninguna fila de salas deja hueco a la derecha: cada línea acaba en un borde.
+      for (const x of l) expect(/[╮│╯]$/.test(texto(x))).toBe(true)
     }
     const muchas = Array.from({ length: 6 }, (_, i) => sesion(`m${i}`, { rama: `r${i}`, estado: 'trabajando' }))
-    const lineas = colocarSalas(salas(vistaSesiones(muchas, AHORA, 30), 'sesiones'), 89, 0).map(texto)
-    expect(lineas[0]?.startsWith('┌ struo ')).toBe(true)
-    expect(lineas[0]?.trimEnd().endsWith('6 sesiones ┐')).toBe(true)
-    expect(lineas[0]?.trimEnd()).toHaveLength(89)
-    // 89 columnas: 4 empleados por fila, así que los 6 ocupan dos filas de la sala.
-    expect(Math.floor((89 - 4) / ANCHO_EMPLEADO)).toBe(4)
+    const lineas = colocarSalas(salas(vistaSesiones(muchas, AHORA, 30), 'sesiones'), 88, 0).map(texto)
+    expect(lineas[0]?.startsWith('╭─ struo ')).toBe(true)
+    expect(lineas[0]?.endsWith('6 sesiones ─╮')).toBe(true)
+    // 88 columnas: 4 mesas por fila, así que las 6 ocupan dos filas de la sala.
+    expect(Math.floor((88 - 4) / ANCHO_EMPLEADO)).toBe(4)
     expect(lineas.filter(l => l.includes('● struo·r'))).toHaveLength(2)
   })
 
-  test('la oficina entera: cabecera con el resumen, salas, leyenda y pie', () => {
-    const todo = componerOficina(datos(), 'sesiones', 89, 0, AHORA).map(texto).join('\n')
-    for (const t of ['huddle · oficina', '[Sesiones]', '5 sesiones · 1 trabajando · 1 espera · 1 inactiva', '┌ struo', '2 sesiones', '● struo·feat-export', 'espera GATE#1', '┌ GENERAL', 'torre', 'inactiva', 'Estados', '/panel · /oficina agentes']) {
+  test('la oficina entera: salas, leyenda y pie; la cabecera, junto a las pestañas', () => {
+    const todo = componerOficina(datos(), 'sesiones', 88, 0, AHORA).map(texto).join('\n')
+    for (const t of ['╭─ struo', '2 sesiones', '● struo·feat-export', 'espera GATE#1', '╭─ GENERAL', 'torre', 'inactiva', 'Estados', '/panel · /oficina agentes']) {
       expect(todo).toContain(t)
     }
-    const agentes = componerOficina(datos(), 'agentes', 89, 0, AHORA).map(texto).join('\n')
-    expect(agentes).toContain('[Agentes]')
+    const cab = texto(resumenOficina(datos(), AHORA, 70))
+    expect(cab).toContain('oficina')
+    expect(cab).toContain('5 sesiones · 1 trabajando · 1 espera · 1 inactiva')
+    const agentes = componerOficina(datos(), 'agentes', 88, 0, AHORA).map(texto).join('\n')
     expect(agentes).toContain('STR-explore-01')
     expect(agentes).toContain('Roles')
-    expect(componerOficina(datos([]), 'sesiones', 89, 0, AHORA).map(texto).join('\n')).toContain('La oficina está vacía')
+    expect(componerOficina(datos({ sesiones: [] }), 'sesiones', 88, 0, AHORA).map(texto).join('\n')).toContain('La oficina está vacía')
   })
 })

@@ -5,50 +5,82 @@
 Huddle es un mod de Claude Code para organizar tus proyectos de un vistazo. Abres una sesión en una carpeta de control y ves todas tus sesiones, agentes y proyectos: quién está trabajando, quién te espera, cómo va cada proyecto, cuánto contexto ha usado cada sesión y cuánto uso te queda. Todo el estado se guarda en Markdown sencillo, editable a mano.
 
 ```
-[ Panel ][ Oficina ]
-huddle · /mnt/d/GitHub                               sáb 31 oct · 02:59 · refresh hace 4m
-Sesiones 3/3 · Te esperan 1 · Agentes 1 +1 sub                  Tareas hoy 50% █████░░░░░
-         ▀▀▀▀▀▀▀▀         Rex · alerta
-         ▀▀▀▀▀▀▀▀▀▀▀▀ !
-         ▀▀▀▀▀▀▀▀▀▀▀▀     “¡main te espera!”
-         ▀▀▀▀▀▀▀▀
- ▀▀    ▀▀▀▀▀▀▀▀▀▀▀▀       racha 1 día · nivel 1
- ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
-   ▀▀▀▀▀▀▀▀▀▀▀▀
-     ▀▀    ▀▀
-     ▀▀    ▀▀
-
-Ejecutándose ahora
-● api-pagos · main            sesión   permiso: Write                                 ⏸
-● struo · feat-x              sesión   Bash · sleep                                   ◓
-  └ STR-explore-01              explore  usos de token                                ◑
-● GENERAL · torre             sesión   sesión abierta                                 ·
-
-Progreso por proyecto
-struo     ola 3 · 2/3        ███████░░░  67%
-
-Alertas
-▲ struo: 1 commit sin push
-
-Siguiente acción
-1. Push en struo (1 commit sin subir)
-─────────────────────────────────────────────────────────────────────────────────────────
-Sesión 5 h ██░░░░░░░░ 19% · reinicia en 2h 31m
-Semana ███░░░░░░░ 32% · reinicia vie 07:00
+p:  Panel  o:  Oficina   huddle · /mnt/d/GitHub    sáb 31 oct · 03:46 · refresh hace 2m
+╭─ Sesiones ────────╮ ╭─ Te esperan ──────╮ ╭─ Agentes ─────────╮ ╭─ Tareas hoy ──────╮
+│ █ █               │ │ ▄█                │ │ ▀▀█               │ │ ▀▀█ ▄█            │
+│ ▀▀█               │ │  █                │ │ █▀▀               │ │  ▄▀  █            │
+│   ▀ /5            │ │ ▀▀▀               │ │ ▀▀▀ +2 sub        │ │  ▀  ▀▀▀ %         │
+│ 2 trab · 1 pausa  │ │ feat-export · 9m  │ │ explore · tests   │ │ ███████▊    5/7   │
+╰───────────────────╯ ╰───────────────────╯ ╰───────────────────╯ ╰───────────────────╯
+╭─ Rex ─────────── alerta ─╮ ╭─ Ejecutándose ahora ────────────────────── 5 sesiones ─╮
+│           ▀▀▀▀▄▄         │ │ ● struo · feat-export  sesión   permiso: Write       ⏸ │
+│           ▀▀▀▀▀▀ !       │ │ ● struo · feat-auth    sesión   editando auth.ts     ◓ │
+│       ▀▄▄▀▀▀▀▀▀          │ │ └ STR-explore-01       explore  usos de token        ◑ │
+│        ▀▀▀▀▀▀    ▄       │ │ └ STR-tests-01         tests    vitest 212/240       ◑ │
+│         ▀  ▀    ▀▀▀      │ │ ● proyecto-b · main    sesión   migración v2         ◓ │
+│     “¡feat-export te     │ │ ● GENERAL · torre      sesión   sesión abierta       · │
+│         espera!”         │ │ ● proyecto-c · main    sesión   inactiva 3h 1m       z │
+│  racha 7 días · nivel 1  │ │                                                        │
+╰──────────────────────────╯ ╰────────────────────────────────────────────────────────╯
+╭─ Progreso por proyecto ──────── 3 de 4 ─╮ ╭─ Contexto por sesión ───────────────────╮
+│ struo      ola 3 · 5/7 ███████▊     71% │ │ struo·feat-export       ████████▎   83% │
+│ proyecto-b migración … █████████▉   90% │ │ struo·feat-auth         ████▊       48% │
+│ proyecto-c MVP · 4/10  ████▍        40% │ │ proyecto-b·main         ███▏        31% │
+│                                         │ │ GENERAL·torre                       n/d │
+│                                         │ ╰─────────────────────────────────────────╯
+│                                         │ ╭─ Alertas ─────────────────────────── 4 ─╮
+│                                         │ │ ▲ feat-export: contexto 83 %, compactar │
+│                                         │ │ ▲ feat-export: espera hace 9 min        │
+│                                         │ │ ▲ proyecto-b: 3 commits sin push        │
+│                                         │ │ ▲ 1 carpeta sin clasificar              │
+╰─────────────────────────────────────────╯ ╰─────────────────────────────────────────╯
+╭─ Actividad ──────── ■ commits ■ turnos ─╮ ╭─ Siguiente acción ──────────────────────╮
+│              ██                         │ │ 1. Aprobar GATE#1 en struo/feat-export  │
+│    ▇█        ██    ▃                    │ │ 2. Compactar esa sesión                 │
+│    ██    █   ██   ▆█        ▁▅          │ │ 3. Push en proyecto-b                   │
+│    ██   ▅█   ██   ██   ▁█   ██   ▁▁     │ │                                         │
+│     L    M    X    J    V    S    D     │ │                                         │
+╰─────────────────────────────────────────╯ ╰─────────────────────────────────────────╯
+╭─ Sesión 5 h ────────────────────────────╮ ╭─ Semana ────────────────────────────────╮
+│ ██████████▉                         31% │ │ ███████████▉                        34% │
+│ reinicia en 1h 41m                      │ │ reinicia vie 07:00                      │
+╰─────────────────────────────────────────╯ ╰─────────────────────────────────────────╯
+ /oficina · /refresh · /preguntar · /abrir                            1 sin clasificar
 ```
 
-*El panel, acoplado a la derecha de la conversación (captura real, sin colores; en el terminal Rex, las barras y los estados van en color).*
+*El panel acoplado a la derecha de la conversación, a 87 columnas (captura real con datos de ejemplo; en el terminal las tarjetas, las barras y Rex van en color).*
 
 ```
-huddle · oficina  Sesiones  [Agentes]   3 sesiones · 1 trabajando · 1 espera · 0 inactiva
-
-┌ api-pagos ── 1 agente ┐ ┌ struo ────────────────────── 2 agentes ┐
-│  \o!  ▄▄▄             │ │   o   ▄▄▄            o   ▄▄▄           │
-│   █   █▀█             │ │  ▐█▀  █▀█           ▐█▀  █▀█           │
-│ ▀▀▀▀▀▀▀▀▀▀            │ │ ▀▀▀▀▀▀▀▀▀▀         ▀▀▀▀▀▀▀▀▀▀          │
-│ ● PAG-lead-01         │ │ ● STR-lead-01      ● STR-explore-01    │
-│   permiso: Write      │ │   Bash · sleep       Bash · ls         │
-└───────────────────────┘ └────────────────────────────────────────┘
+p:  Panel  o:  Oficina  s:  Sesiones  a:  Agentes  oficina 5 sesiones · 2 trabajando ·…
+╭─ struo ───────────────────────────────────────────────────────────────── 4 agentes ─╮
+│     ▀▀ ▀! ▄▄▄▄▄         ▀▀    ▄▄▄▄▄         ▀▀    ▄▄▄▄▄         ▀▀    ▄▄▄▄▄         │
+│    ▀▀▀▀▀  ▀▀▀▀▀        ▀▀▀▀   ▀▀▀▀▀        ▀▀▀▀   ▀▀▀▀▀        ▀▀▀▀   ▀▀▀▀▀         │
+│    ▀▀▀▀ ▄▄▀▀▀▀▀        ▀▀▀▀▀▀▄▀▀▀▀▀        ▀▀▀▀▀▀▄▀▀▀▀▀        ▀▀▀▀▀▀▄▀▀▀▀▀         │
+│   ▀▀▀▀▀▀▀▀▀▀▀▀▀▀      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀        │
+│    ▀          ▀        ▀          ▀        ▀          ▀        ▀          ▀         │
+│ ● STR-lead-02       ● STR-lead-01       ● STR-explore-01    ● STR-tests-01          │
+│   permiso: Write      editando auth.ts    Bash · rg           Bash · pnpm           │
+╰─────────────────────────────────────────────────────────────────────────────────────╯
+╭─ proyecto-b ─────────────────── 1 agente ─╮ ╭─ GENERAL ────────────────── 1 agente ─╮
+│        ▀▀    ▄▄▄▄▄                        │ │              ▄▄▄▄▄                    │
+│       ▀▀▀▀   ▀▀▀▀▀                        │ │       ▄▄▄ z  ▀▀▀▀▀                    │
+│       ▀▀▀▀▀▀▄▀▀▀▀▀                        │ │       ▀▀▀▀▀▄▄▀▀▀▀▀                    │
+│      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀                       │ │      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀                   │
+│       ▀          ▀                        │ │       ▀          ▀                    │
+│ ● PRB-lead-01                             │ │ ● GEN-lead-01                         │
+│   migración v2                            │ │   sesión abierta                      │
+╰───────────────────────────────────────────╯ ╰───────────────────────────────────────╯
+╭─ proyecto-c ───────────────────────────────────────────────────────────── 1 agente ─╮
+│              ▄▄▄▄▄                                                                  │
+│       ▄▄▄ z  ▀▀▀▀▀                                                                  │
+│       ▀▀▀▀▀▄▄▀▀▀▀▀                                                                  │
+│      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀                                                                 │
+│       ▀          ▀                                                                  │
+│ ● PRC-lead-01                                                                       │
+│   inactiva 3h 2m                                                                    │
+╰─────────────────────────────────────────────────────────────────────────────────────╯
+ Estados ● trabajando  ● espera  ● pausa  ● inactiva  · Roles ■ lead  ■ explore  ■ pla…
+ /panel · /oficina sesiones
 ```
 
 *La oficina en modo agentes.*

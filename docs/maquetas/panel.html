@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>huddle · maqueta de referencia</title>
+<style>
+:root{--surface-0:#f5f4ef;--surface-1:#faf9f5;--surface-2:#ffffff;--text-primary:#1f1e1d;--text-secondary:#5f5e5a;--text-muted:#888780;--border:rgba(0,0,0,.12);--border-strong:rgba(0,0,0,.2);--border-stronger:rgba(0,0,0,.4);--bg-success:#EAF3DE;--text-success:#3B6D11;--bg-warning:#FAEEDA;--text-warning:#854F0B;--text-danger:#A32D2D;--font-sans:system-ui,-apple-system,"Segoe UI",sans-serif;--font-mono:"Cascadia Mono","JetBrains Mono",ui-monospace,Consolas,monospace;--radius:8px}
+@media (prefers-color-scheme:dark){:root{--surface-0:#1a1a19;--surface-1:#232322;--surface-2:#2b2b29;--text-primary:#f1efe8;--text-secondary:#b4b2a9;--text-muted:#888780;--border:rgba(255,255,255,.12);--border-strong:rgba(255,255,255,.2);--border-stronger:rgba(255,255,255,.4);--bg-success:#27500A;--text-success:#C0DD97;--bg-warning:#633806;--text-warning:#FAC775;--text-danger:#F09595}}
+body{margin:0;padding:24px;background:var(--surface-0);color:var(--text-primary);font-family:var(--font-sans);max-width:760px}
+button{font:inherit;font-size:12px;color:var(--text-primary);background:transparent;border:.5px solid var(--border-strong);border-radius:var(--radius);padding:4px 10px;cursor:pointer}
+button:hover{background:var(--surface-1)}
+input{font:inherit;padding:4px 8px;border:.5px solid var(--border-strong);border-radius:var(--radius);background:var(--surface-2);color:var(--text-primary)}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.nota-ref{font-size:12px;color:var(--text-secondary);margin:0 0 12px}
+</style></head><body>
+<p class="nota-ref">Maqueta de referencia · Huddle · vista Panel (datos inventados). La vista web debe parecerse a esto.</p>
+<style>
+.t{font-family:var(--font-mono);font-size:12px;line-height:1.5}
+.box{background:var(--surface-2);border:0.5px solid var(--border);border-radius:8px;padding:10px 12px}
+.mut{color:var(--text-secondary)}
+.lab{color:var(--text-secondary);font-size:11px;margin-bottom:6px}
+.bar{height:8px;border-radius:4px;background:var(--surface-1);overflow:hidden;border:0.5px solid var(--border)}
+.bar>i{display:block;height:100%}
+.k{font-size:22px;font-weight:500;line-height:1.1}
+.sp{display:inline-block;animation:sp 1s steps(4) infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+@keyframes shake{25%{transform:translateX(-2px)}75%{transform:translateX(2px)}}
+.tabs span{padding:2px 10px;border-radius:6px}
+</style>
+<div class="t" style="background:var(--surface-1);border-radius:12px;padding:12px;border:0.5px solid var(--border)">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+<span class="tabs"><span style="background:#D85A30;color:#fff">Panel</span> <span class="mut">Oficina</span></span>
+<span class="mut">huddle · /mnt/d/Github · sáb 31 oct · 00:46 · refresh hace 2m</span></div>
+<div style="display:grid;grid-template-columns:minmax(0,1fr) 150px;gap:8px">
+<div>
+<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px">
+<div class="box"><div class="lab">Sesiones vivas</div><div class="k" style="color:var(--text-success)">3<span class="mut" style="font-size:13px"> /5</span></div></div>
+<div class="box"><div class="lab">Te esperan</div><div class="k" style="color:var(--text-warning)">1</div></div>
+<div class="box"><div class="lab">Agentes</div><div class="k">2 <span class="mut" style="font-size:12px">+5 sub</span></div></div>
+<div class="box"><div class="lab">Tareas hoy</div><div class="k">71%</div><div class="bar" style="margin-top:6px"><i style="width:71%;background:#1D9E75"></i></div></div>
+</div>
+<div class="box" style="margin-top:8px">
+<div class="lab">Ejecutándose ahora</div>
+<div id="tree"></div>
+</div>
+</div>
+<div class="box" style="display:flex;flex-direction:column;align-items:center;justify-content:space-between">
+<div class="lab" style="align-self:flex-start">Rex</div>
+<svg id="rex" width="84" height="84" viewBox="-1 -2 12 12" style="image-rendering:pixelated;animation:shake .3s linear infinite" role="img"><title>Rex en alerta</title></svg>
+<div style="text-align:center;font-size:11px;margin-top:6px">"¡feat-export te espera!"</div>
+<div class="mut" style="font-size:11px;margin-top:8px;text-align:center">racha 6 días<br>nivel 12 · <span style="color:#D85A30">██████</span>░░</div>
+</div>
+</div>
+<div style="display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:8px;margin-top:8px">
+<div class="box"><div class="lab">Progreso por proyecto</div><div id="proj"></div></div>
+<div class="box"><div class="lab">Contexto por sesión</div><div id="ctx"></div>
+<div class="lab" style="margin-top:10px">Alertas</div>
+<div style="font-size:11px;line-height:1.7"><span style="color:var(--text-danger)">▲</span> feat-export ctx 83%, compactar<br><span style="color:var(--text-warning)">▲</span> proyecto-b: 3 commits sin push<br><span style="color:var(--text-warning)">▲</span> CI rojo en struo/develop</div>
+</div>
+</div>
+<div style="display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:8px;margin-top:8px">
+<div class="box">
+<div style="display:flex;justify-content:space-between"><span class="lab">Actividad 7 días</span><span class="mut" style="font-size:11px"><span style="color:#7F77DD">■</span> commits <span style="color:#5DCAA5">■</span> turnos</span></div>
+<div id="act" style="display:flex;align-items:flex-end;gap:8px;height:80px"></div>
+</div>
+<div class="box"><div class="lab">Siguiente acción sugerida</div>
+<div style="font-size:12px;line-height:1.6">1. Aprobar GATE#1 en struo/feat-export<br>2. Compactar esa sesión<br>3. Push en proyecto-b</div>
+</div>
+</div>
+<div class="box" style="margin-top:8px">
+<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px">
+<div><div style="display:flex;justify-content:space-between;font-size:11px"><span class="mut">Uso de la sesión de 5 h</span><span><span style="font-weight:500">64%</span> <span class="mut">· reinicia en 2h 10m</span></span></div><div class="bar" style="margin-top:4px;height:10px"><i style="width:64%;background:#378ADD"></i></div></div>
+<div><div style="display:flex;justify-content:space-between;font-size:11px"><span class="mut">Uso semanal</span><span><span style="font-weight:500">41%</span> <span class="mut">· reinicia jue 09:00</span></span></div><div class="bar" style="margin-top:4px;height:10px"><i style="width:41%;background:#7F77DD"></i></div></div>
+</div>
+</div>
+</div>
+<script>
+const SP=["....####..","....#o####","....######","....####..","#..######.","########..",".######...","..#..#....","..#..#....",".........."];
+let r="";SP.forEach((row,y)=>[...row].forEach((ch,x)=>{if(ch!=".")r+=`<rect x="${x}" y="${y}" width="1.02" height="1.02" fill="${ch=='o'?'#4A1B0C':'#D85A30'}"/>`}));
+r+='<text x="9.5" y="-0.3" font-size="3" fill="#E24B4A" font-family="monospace">!</text>';document.getElementById('rex').innerHTML=r;
+const T=[["struo/feat-auth","sesión","editando src/auth.ts","#1D9E75",0,1],["Explore","subagente","buscando usos de token",null,1,1],["general-purpose","subagente","corriendo tests",null,1,1],["struo/feat-export","sesión","espera aprobación","#BA7517",0,0],["proyecto-b","sesión","migración v2","#1D9E75",0,1],["Plan","subagente","diseñando esquema",null,1,1],["Explore ×2","subagentes","leyendo docs",null,1,1]];
+document.getElementById('tree').innerHTML=T.map(r=>`<div style="display:flex;justify-content:space-between;padding:3px 0;${r[4]?'padding-left:16px':'border-top:0.5px solid var(--border)'}"><span>${r[4]?'<span class="mut">└ </span>':`<span style="color:${r[3]}">●</span> `}${r[0]} <span class="mut" style="font-size:11px">${r[1]}</span></span><span class="mut" style="font-size:11px">${r[2]} ${r[5]?'<span class="sp">◐</span>':'<span style="color:var(--text-warning)">⏸</span>'}</span></div>`).join('');
+const P=[["struo","ola 3 · 5/7",72,"#7F77DD"],["proyecto-b","migración v2",90,"#1D9E75"],["proyecto-c","MVP",41,"#D85A30"],["proyecto-d","pausado",18,"#888780"]];
+document.getElementById('proj').innerHTML=P.map(p=>`<div style="margin-bottom:9px"><div style="display:flex;justify-content:space-between"><span>${p[0]} <span class="mut" style="font-size:11px">${p[1]}</span></span><span style="font-weight:500">${p[2]}%</span></div><div class="bar" style="margin-top:3px"><i style="width:${p[2]}%;background:${p[3]}"></i></div></div>`).join('');
+const C=[["struo/feat-auth",48],["struo/feat-export",83],["proyecto-b",31]];
+document.getElementById('ctx').innerHTML=C.map(c=>{const col=c[1]>80?'#E24B4A':c[1]>60?'#BA7517':'#378ADD';return `<div style="margin-bottom:7px"><div style="display:flex;justify-content:space-between;font-size:11px"><span>${c[0]}</span><span style="color:${col}">${c[1]}%</span></div><div class="bar" style="margin-top:2px"><i style="width:${c[1]}%;background:${col}"></i></div></div>`}).join('');
+const D=[["L",9,22],["M",14,31],["X",11,18],["J",17,40],["V",13,35],["S",19,44],["D",3,8]];
+document.getElementById('act').innerHTML=D.map(d=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="display:flex;gap:2px;align-items:flex-end;height:58px"><div style="width:8px;height:${Math.round(d[1]/44*58)}px;background:#7F77DD;border-radius:2px 2px 0 0"></div><div style="width:8px;height:${Math.round(d[2]/44*58)}px;background:#5DCAA5;border-radius:2px 2px 0 0"></div></div><span class="mut" style="font-size:11px">${d[0]}</span></div>`).join('');
+</script>
+</body></html>

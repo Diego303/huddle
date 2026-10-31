@@ -1,6 +1,15 @@
-// La pantalla Panel (§3.1 del plan) compuesta como bloques de líneas y Rex.
-// La disposición principal es la compacta (el panel acoplado a la derecha, ~89
-// columnas); a partir de 100 columnas se usan dos columnas, como el wireframe.
+// La pantalla Panel (§3.1 del plan) como una rejilla de tarjetas.
+//
+//   compacto (70–90 col, el panel acoplado):   ancho (> 90 col): la misma
+//   ╭KPI╮╭KPI╮╭KPI╮╭KPI╮                         rejilla con más aire, y Rex a
+//   ╭Rex╮╭Ejecutándose ahora────╮                2× si sobra alto.
+//   ╭Progreso──╮╭Contexto───────╮                estrecho (< 70): KPIs 2×2 y
+//   │          │╰Alertas────────╯                una tarjeta por fila.
+//   ╭Actividad─╮╭Siguiente acción╮
+//   ╭Sesión 5 h╮╭Semana─────────╮
+//   pie
+//
+// Todo son líneas del lienzo, cada una exactamente del ancho pedido.
 
 import type { DatosPanel } from '../lib/lector.ts'
 import type { FichaPanel, SesionVista } from '../lib/panel-datos.ts'
@@ -16,19 +25,19 @@ import {
   racha,
   vistaSesiones,
 } from '../lib/panel-datos.ts'
+import { anchoGrande, grande } from './digitos.ts'
 import type { Linea } from './lienzo.ts'
-import { ajustar, barra, celda, COLOR, columnas, extremos, minibarra, s } from './lienzo.ts'
-import type { Celda } from './rex.ts'
+import { ajustar, ancho, barraSuave, col, COLOR, columnaVertical, CORAL_CLARO, extremos, fila, interior, partir, queQuepa, repartir, s, tarjeta } from './lienzo.ts'
 import type { Adorno } from './rex.ts'
-import { adornoDe, COLUMNAS as ANCHO_REX, fotograma } from './rex.ts'
-
-export type Bloque = { tipo: 'lineas'; lineas: Linea[] } | { tipo: 'rex'; celdas: Celda[][]; lado: Linea[]; ladoAncho: number }
+import { adornoDe, comoLineas, fotograma, tamano } from './rex.ts'
 
 const DIAS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb']
 const LETRA = ['D', 'L', 'M', 'X', 'J', 'V', 'S']
 const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
 const SPIN = ['◐', '◓', '◑', '◒']
+const APAGADO = '#3a3936'
 const dos = (n: number) => String(n).padStart(2, '0')
+const gris = { c: COLOR.gris }
 
 function local(ms: number, desfase: number): Date {
   return new Date(ms + desfase * 60_000)
@@ -84,204 +93,15 @@ function icono(estado: string, n: number): string {
   return '·'
 }
 
-function colorContexto(pct: number): string {
+/** Azul por debajo del 60 %, ámbar del 60 al 80 % y rojo a partir del 80 %. */
+export function colorPorcentaje(pct: number): string {
   return pct >= 80 ? COLOR.rojo : pct >= 60 ? COLOR.ambar : COLOR.azul
 }
 
-function titulo(t: string, extra: Linea = []): Linea {
-  return [s(t, { c: COLOR.titulo, b: true }), ...extra]
+function centrar(l: Linea, w: number): Linea {
+  const hueco = Math.max(0, Math.floor((w - ancho(l)) / 2))
+  return hueco > 0 ? [s(' '.repeat(hueco)), ...l] : l
 }
-
-// ------------------------------------------------------------- secciones
-
-function cabecera(d: DatosPanel, ahora: number, w: number): Linea {
-  const refresh = d.ultimoRefresh === null ? 'sin /refresh' : `refresh hace ${duracion((ahora - d.ultimoRefresh) / 60_000)}`
-  return extremos(
-    [s('huddle', { c: COLOR.titulo, b: true }), s(` · ${d.raiz}`, { c: COLOR.gris })],
-    [s(`${fechaCabecera(ahora, d.desfase)} · ${refresh}`, { c: COLOR.gris })],
-    w,
-  )
-}
-
-function lineaContadores(vistas: SesionVista[], d: DatosPanel, w: number): Linea[] {
-  const c = contadores(vistas)
-  const hoyPct = d.hoy ? porcentaje(d.hoy) : null
-  const a: Linea = [
-    s('Sesiones '),
-    s(`${c.vivas}`, { b: true }),
-    s(`/${c.total}`, { c: COLOR.gris }),
-    s(' · Te esperan '),
-    s(`${c.teEsperan}`, { b: true, ...(c.teEsperan > 0 ? { c: COLOR.ambar } : {}) }),
-    s(' · Agentes '),
-    s(`${c.leads}`, { b: true }),
-    s(` +${c.subagentes} sub`, { c: COLOR.gris }),
-  ]
-  const b: Linea = [s('Tareas hoy '), s(hoyPct === null ? '—' : `${hoyPct}%`, { b: true }), s(' '), ...barra(hoyPct, 10, COLOR.verdeOscuro)]
-  if (w >= 80) return [extremos(a, b, w)]
-  return [a, b]
-}
-
-export function adornoHoy(d: DatosPanel, ahora: number): Adorno {
-  const l = local(ahora, d.desfase)
-  return adornoDe(l.getUTCMonth() + 1, l.getUTCDate(), d.rex_estacional ?? true)
-}
-
-function bloqueRex(vistas: SesionVista[], fichas: FichaPanel[], d: DatosPanel, n: number, ladoAncho: number, ahora: number): Bloque {
-  const estado = estadoRex(vistas, fichas)
-  const lado: Linea[] = [
-    titulo('Rex', [s(` · ${estado}`, { c: COLOR.gris })]),
-    [],
-    [s(`“${bocadillo(estado, vistas, fichas)}”`, { b: true, ...(estado === 'alerta' ? { c: COLOR.ambar } : {}) })],
-    [],
-    [s(`${textoRacha(racha(d.dias))} · nivel ${nivel(d.turnosTotales)}`, { c: COLOR.gris })],
-  ]
-  return { tipo: 'rex', celdas: fotograma(estado, n, adornoHoy(d, ahora)), lado, ladoAncho }
-}
-
-function ejecutandose(vistas: SesionVista[], n: number, w: number, max: number): Linea[] {
-  const out: Linea[] = [titulo('Ejecutándose ahora')]
-  if (vistas.length === 0) {
-    out.push([s('  (ninguna sesión abierta)', { c: COLOR.gris })])
-    return out
-  }
-  const wNombre = Math.min(28, Math.max(16, Math.floor(w * 0.34)))
-  const wRol = 9
-  const wDetalle = Math.max(8, w - wNombre - wRol - 6)
-  const filas: Linea[] = []
-  for (const v of vistas) {
-    const color = colorEstado(v.estado)
-    const detalle = v.estado === 'inactiva' ? `inactiva ${duracion(v.quietaMin)}` : v.s.detalle
-    filas.push([
-      s('● ', { c: color }),
-      celda(v.etiqueta, wNombre, v.estado === 'inactiva' ? { d: true } : {}),
-      celda('sesión', wRol, { c: COLOR.gris }),
-      celda(detalle, wDetalle, v.estado === 'te_espera' ? { c: COLOR.ambar } : { c: COLOR.grisClaro }),
-      s(` ${icono(v.estado, n)}`, { c: color }),
-    ])
-    for (const a of v.agentes) {
-      filas.push([
-        s('  └ ', { c: COLOR.gris }),
-        celda(a.id, wNombre, { c: a.color }),
-        celda(a.tipo, wRol, { c: a.color }),
-        celda(a.estado === 'trabajando' ? a.descripcion : `${a.descripcion} · ${a.detalle}`, wDetalle - 2, { c: COLOR.grisClaro }),
-        s(` ${icono(a.estado, n + 1)}`, { c: colorEstado(a.estado) }),
-      ])
-    }
-  }
-  if (filas.length > max) {
-    const resto = filas.length - (max - 1)
-    out.push(...filas.slice(0, max - 1), [s(`  … y ${resto} más`, { c: COLOR.gris })])
-  } else {
-    out.push(...filas)
-  }
-  return out
-}
-
-function progreso(fichas: FichaPanel[], w: number): Linea[] {
-  const out: Linea[] = [titulo('Progreso por proyecto')]
-  if (fichas.length === 0) out.push([s('  sin fichas: mueve proyectos a «Hacer seguimiento» y usa /proyectos', { c: COLOR.gris })])
-  const wNombre = Math.min(14, Math.max(...fichas.map(f => f.carpeta.length), 6))
-  const wFase = Math.max(6, Math.min(18, w - wNombre - 20))
-  for (const f of fichas) {
-    const fase = [f.fase, f.tareas.total > 0 ? `${f.tareas.hechas}/${f.tareas.total}` : ''].filter(Boolean).join(' · ')
-    out.push([
-      celda(f.carpeta, wNombre + 1),
-      celda(fase || '—', wFase + 1, { c: COLOR.gris }),
-      ...barra(f.pct, 10, f.pct === 100 ? COLOR.verde : COLOR.verdeOscuro),
-      s(f.pct === null ? '    —' : `${String(f.pct).padStart(4)}%`),
-    ])
-  }
-  return out
-}
-
-function contexto(vistas: SesionVista[], w: number): Linea[] {
-  const out: Linea[] = [titulo('Contexto por sesión')]
-  const vivas = vistas.filter(v => v.estado !== 'inactiva')
-  if (vivas.length === 0) out.push([s('  —', { c: COLOR.gris })])
-  const wNombre = Math.max(12, Math.min(26, w - 18))
-  for (const v of vivas) {
-    const pct = v.s.contexto_pct
-    out.push([
-      celda(v.etiqueta.replace(' · ', '·'), wNombre + 1),
-      ...barra(pct, 10, pct === null ? COLOR.gris : colorContexto(pct)),
-      s(pct === null ? '  n/d' : `${String(pct).padStart(4)}%`, pct === null ? { c: COLOR.gris } : {}),
-    ])
-  }
-  return out
-}
-
-function listaAlertas(vistas: SesionVista[], d: DatosPanel, ahora: number) {
-  const todas = [...alertasBasicas(vistas, d.sinClasificar), ...alertasGit(d.git ?? {}, ahora)]
-  // Las graves primero; «sin clasificar» al final.
-  const peso = (a: { nivel: string; texto: string }) => (a.texto.includes('sin clasificar') ? 2 : a.nivel === 'grave' ? 0 : 1)
-  return todas.sort((a, b) => peso(a) - peso(b))
-}
-
-function alertas(vistas: SesionVista[], d: DatosPanel, ahora: number): Linea[] {
-  const lista = listaAlertas(vistas, d, ahora)
-  if (lista.length === 0) return [titulo('Alertas'), [s('  ninguna', { c: COLOR.gris })]]
-  const mas = lista.length > 5 ? [[s(`  … y ${lista.length - 5} más`, { c: COLOR.gris })]] : []
-  return [titulo('Alertas'), ...lista.slice(0, 5).map(a => [s('▲ ', { c: a.nivel === 'grave' ? COLOR.rojo : COLOR.ambar }), s(a.texto)]), ...mas]
-}
-
-function actividad(d: DatosPanel): Linea[] {
-  const maxT = Math.max(0, ...d.dias.map(x => x.turnos))
-  const maxC = Math.max(0, ...d.dias.map(x => x.commits ?? 0))
-  const barras: Linea = [s(' ')]
-  const letras: Linea = [s(' ')]
-  for (const dia of d.dias) {
-    barras.push(s(minibarra(dia.commits, maxC), { c: COLOR.morado }), s(minibarra(dia.turnos, maxT), { c: COLOR.verde }), s(' '))
-    const sem = new Date(`${dia.dia}T12:00:00Z`).getUTCDay()
-    letras.push(s(`${LETRA[sem]}  `, { c: COLOR.gris }))
-  }
-  return [
-    titulo('Actividad 7 días', [s('  ■', { c: COLOR.morado }), s(' commits', { c: COLOR.gris }), s(' ■', { c: COLOR.verde }), s(' turnos', { c: COLOR.gris })]),
-    barras,
-    letras,
-  ]
-}
-
-function siguiente(vistas: SesionVista[], d: DatosPanel): Linea[] {
-  const acciones = d.siguiente.length > 0 ? d.siguiente : accionesPorReglas(vistas, d.git ?? {})
-  const out: Linea[] = [titulo('Siguiente acción', d.siguiente.length === 0 && acciones.length > 0 ? [s('  (por reglas)', { c: COLOR.gris })] : [])]
-  if (acciones.length === 0) out.push([s('  nada pendiente · /refresh para que Claude proponga', { c: COLOR.gris })])
-  acciones.forEach((a, i) => out.push([s(`${i + 1}. `, { c: COLOR.gris }), s(a)]))
-  return out
-}
-
-function uso(d: DatosPanel, ahora: number, w: number): Linea[] {
-  const u = d.uso
-  const ventana = (nombre: string, v: { pct: number; reinicia: string | null } | null | undefined): Linea =>
-    v
-      ? [s(`${nombre} `), ...barra(v.pct, 10, v.pct >= 80 ? COLOR.rojo : v.pct >= 60 ? COLOR.ambar : COLOR.azul), s(` ${Math.round(v.pct)}%`, { b: true }), s(` · ${reinicio(v.reinicia, ahora, d.desfase)}`, { c: COLOR.gris })]
-      : [s(`${nombre} `), s('n/d · configúralo en config.json', { c: COLOR.gris })]
-  const e = d.usoEstimado ?? null
-  // Sin dato oficial pero con límites en la config: estimación con ≈.
-  const estimada = (nombre: string, pct: number | null, reinicia: string): Linea =>
-    pct === null
-      ? [s(`${nombre} `), s('n/d · configúralo en config.json', { c: COLOR.gris })]
-      : [s(`${nombre} `), ...barra(Math.min(100, pct), 10, pct >= 80 ? COLOR.rojo : pct >= 60 ? COLOR.ambar : COLOR.azul), s(` ≈${pct}%`, { b: true }), s(` · ${reinicia}`, { c: COLOR.gris })]
-  const a = u === null && e ? estimada('Sesión 5 h', e.cinco_horas, 'ventana móvil de 5 h') : ventana('Sesión 5 h', u?.cinco_horas)
-  const b =
-    u === null && e
-      ? estimada('Semana', e.semana, e.reinicioSemana === null ? 'reinicio n/d' : reinicio(new Date(e.reinicioSemana).toISOString(), ahora, d.desfase))
-      : ventana('Semana', u?.semana)
-  return w >= 96 ? [extremos(a, b, w)] : [a, b]
-}
-
-function pie(d: DatosPanel, w: number): Linea {
-  return extremos(
-    [s('/oficina · /refresh · /preguntar · /abrir', { c: COLOR.gris })],
-    d.sinClasificar > 0 ? [s(`${d.sinClasificar} sin clasificar`, { c: COLOR.ambar })] : [],
-    w,
-  )
-}
-
-function regla(w: number): Linea {
-  return [s('─'.repeat(w), { c: COLOR.gris })]
-}
-
-// ------------------------------------------------------------- composición
 
 export function fichasPanel(d: DatosPanel, ahora: number): FichaPanel[] {
   return d.fichas.map(f => {
@@ -290,59 +110,448 @@ export function fichasPanel(d: DatosPanel, ahora: number): FichaPanel[] {
   })
 }
 
-/** El panel entero para `w` columnas y `h` filas. `n` es el fotograma de la animación. */
-export function componerPanel(d: DatosPanel | null, w: number, h: number, n: number, ahora: number): Bloque[] {
-  const ancho = Math.max(30, w)
-  if (d === null) return [{ tipo: 'lineas', lineas: [titulo('huddle'), [s('Leyendo la carpeta de control…', { c: COLOR.gris })]] }]
-  const vistas = vistaSesiones(d.sesiones, ahora, d.inactiva_min)
-  const fichas = fichasPanel(d, ahora)
-  if (ancho >= 100) return panelAncho(d, vistas, fichas, ancho, h, n, ahora)
+export function adornoHoy(d: DatosPanel, ahora: number): Adorno {
+  const l = local(ahora, d.desfase)
+  return adornoDe(l.getUTCMonth() + 1, l.getUTCDate(), d.rex_estacional ?? true)
+}
 
-  const fijas =
-    2 + // cabecera + contadores
-    11 + // Rex
-    1 + Math.max(1, fichas.length) +
-    1 + Math.max(1, vistas.filter(v => v.estado !== 'inactiva').length) +
-    1 + Math.max(1, Math.min(6, listaAlertas(vistas, d, ahora).length)) +
-    3 + 4 + 2 + 1 + 6 // actividad, siguiente, uso, pie, separaciones
-  const maxSesiones = Math.max(3, h - fijas)
-  const lineas = (l: Linea[]): Bloque => ({ tipo: 'lineas', lineas: l.map(x => ajustar(x, ancho)) })
+// ------------------------------------------------------------- contexto común
+
+export type Ctx = {
+  d: DatosPanel
+  vistas: SesionVista[]
+  fichas: FichaPanel[]
+  n: number
+  ahora: number
+  aire: number
+}
+
+function listaAlertas(c: Ctx) {
+  const todas = [...alertasBasicas(c.vistas, c.d.sinClasificar), ...alertasGit(c.d.git ?? {}, c.ahora)]
+  // Las graves primero; «sin clasificar» al final.
+  const peso = (a: { nivel: string; texto: string }) => (a.texto.includes('sin clasificar') ? 2 : a.nivel === 'grave' ? 0 : 1)
+  return todas.sort((a, b) => peso(a) - peso(b))
+}
+
+// ------------------------------------------------------------- tarjetas
+
+/**
+ * Un KPI: número grande (3×3), sufijo pequeño a su lado y una línea de detalle.
+ * Si sobra ancho, el detalle va en tres líneas a la derecha de los dígitos.
+ */
+function kpi(o: {
+  titulo: string
+  valor: string
+  color: string
+  sufijo: Linea
+  /** Variantes del detalle de una línea, de la más larga a la más corta. */
+  corto: readonly string[]
+  /** Hasta 3 líneas para el lado de los dígitos. */
+  largo: readonly Linea[]
+  /** Una línea extra al pie (la barra de «Tareas hoy»). */
+  pieKpi?: Linea
+  w: number
+  aire: number
+}): Linea[] {
+  const dentro = interior(o.w, o.aire)
+  const filas = grande(o.valor, o.color)
+  const izquierda = anchoGrande(o.valor) + (o.sufijo.length > 0 ? 1 + ancho(o.sufijo) : 0)
+  const alLado = dentro - izquierda - 3 >= Math.max(16, ...o.largo.map(l => ancho(l)))
+  const lineas: Linea[] = filas.map((f, i) => {
+    const base = i === filas.length - 1 && o.sufijo.length > 0 ? [...f, s(' '), ...o.sufijo] : f
+    if (!alLado) return base
+    const relleno = Math.max(0, izquierda - ancho(base)) + 3
+    return [...base, s(' '.repeat(relleno)), ...(o.largo[i] ?? [])]
+  })
+  if (o.pieKpi) lineas.push(o.pieKpi)
+  else lineas.push(alLado ? [] : [s(queQuepa(o.corto, dentro), gris)])
+  return tarjeta(lineas, { titulo: o.titulo, ancho: o.w, aire: o.aire })
+}
+
+function kpis(c: Ctx, anchos: readonly number[]): Linea[][] {
+  const k = contadores(c.vistas)
+  const trabajando = c.vistas.filter(v => v.estado === 'trabajando').length
+  const pausa = c.vistas.filter(v => v.estado === 'en_pausa').length
+  const inactivas = k.total - k.vivas
+  const espera = c.vistas.filter(v => v.estado === 'te_espera')
+  const tipos = new Map<string, number>()
+  for (const v of c.vistas) {
+    if (v.estado === 'inactiva') continue
+    for (const a of v.agentes) if (a.estado !== 'en_pausa') tipos.set(a.tipo, (tipos.get(a.tipo) ?? 0) + 1)
+  }
+  const hoy = c.d.hoy
+  const pct = hoy ? porcentaje(hoy) : null
+  const w = (i: number) => anchos[i] ?? 20
+  const nombre = (v: SesionVista) => (v.s.tipo === 'proyecto' ? (v.s.rama ?? v.s.proyecto) : v.s.proyecto)
+  const listaTipos = [...tipos].map(([t, n]) => (n > 1 ? `${t} ×${n}` : t))
+  const dentroTareas = interior(w(3), c.aire)
   return [
-    lineas([cabecera(d, ahora, ancho), ...lineaContadores(vistas, d, ancho)]),
-    bloqueRex(vistas, fichas, d, n, Math.max(10, ancho - ANCHO_REX - 2), ahora),
-    lineas([...ejecutandose(vistas, n, ancho, maxSesiones), [], ...progreso(fichas, ancho), [], ...contexto(vistas, ancho), [], ...alertas(vistas, d, ahora), [], ...actividad(d), [], ...siguiente(vistas, d), regla(ancho), ...uso(d, ahora, ancho), pie(d, ancho)]),
+    kpi({
+      titulo: 'Sesiones',
+      valor: String(k.vivas),
+      color: COLOR.verde,
+      sufijo: [s(`/${k.total}`, gris)],
+      corto: [
+        `${trabajando} trabajando · ${pausa} en pausa${inactivas > 0 ? ` · ${inactivas} inactiva${inactivas === 1 ? '' : 's'}` : ''}`,
+        `${trabajando} trabajando · ${pausa} en pausa`,
+        `${trabajando} trab · ${pausa} pausa`,
+        `${trabajando} trabajando`,
+      ],
+      largo: [
+        [s('● ', { c: COLOR.verde }), s(`${trabajando} trabajando`)],
+        [s('● ', { c: COLOR.grisClaro }), s(`${pausa} en pausa`)],
+        [s('● ', gris), s(`${inactivas} inactiva${inactivas === 1 ? '' : 's'}`, gris)],
+      ],
+      w: w(0),
+      aire: c.aire,
+    }),
+    kpi({
+      titulo: 'Te esperan',
+      valor: String(k.teEsperan),
+      color: k.teEsperan > 0 ? COLOR.ambar : COLOR.grisClaro,
+      sufijo: [],
+      corto: espera[0] ? [`${nombre(espera[0])} · ${duracion(espera[0].esperaMin ?? 0)}`, nombre(espera[0])] : ['nadie espera'],
+      largo: espera.length > 0 ? espera.slice(0, 3).map(v => [s(nombre(v), { c: COLOR.ambar }), s(` · ${duracion(v.esperaMin ?? 0)} · ${v.s.detalle}`, gris)]) : [[s('nadie espera', gris)]],
+      w: w(1),
+      aire: c.aire,
+    }),
+    kpi({
+      titulo: 'Agentes',
+      valor: String(k.leads),
+      color: COLOR.titulo,
+      sufijo: [s(`+${k.subagentes} sub`, gris)],
+      corto: listaTipos.length > 0 ? [listaTipos.join(' · '), `${listaTipos.length} tipos`] : ['ningún subagente en marcha', 'sin subagentes'],
+      largo: [
+        [s(`${k.leads} lead${k.leads === 1 ? '' : 's'} trabajando`)],
+        listaTipos.length > 0 ? [s(listaTipos.join(' · '), gris)] : [s('sin subagentes', gris)],
+      ],
+      w: w(2),
+      aire: c.aire,
+    }),
+    kpi({
+      titulo: 'Tareas hoy',
+      valor: pct === null ? '-' : String(pct),
+      color: COLOR.verdeOscuro,
+      sufijo: pct === null ? [] : [s('%', { c: COLOR.verdeOscuro, b: true })],
+      corto: ['sin tareas en «Hoy»', 'sin tareas'],
+      largo: hoy && hoy.total > 0 ? [[s(`${hoy.hechas} de ${hoy.total} hechas`)], [s(`${hoy.total - hoy.hechas} pendientes`, gris)]] : [[s('sin tareas en «Hoy»', gris)]],
+      ...(hoy && hoy.total > 0 ? { pieKpi: [...barraSuave(pct, Math.max(4, dentroTareas - 6), COLOR.verdeOscuro), s(` ${hoy.hechas}/${hoy.total}`, gris)] } : {}),
+      w: w(3),
+      aire: c.aire,
+    }),
   ]
 }
 
-function panelAncho(d: DatosPanel, vistas: SesionVista[], fichas: FichaPanel[], w: number, h: number, n: number, ahora: number): Bloque[] {
-  const izq = Math.floor((w - 3) * 0.42)
-  const der = w - 3 - izq
-  const arriba = Math.max(4, Math.min(14, h - 30))
-  const lineas = (l: Linea[]): Bloque => ({ tipo: 'lineas', lineas: l.map(x => ajustar(x, w)) })
-  const anchoTexto = w - ANCHO_REX - 3
-  return [
-    lineas([cabecera(d, ahora, w), regla(w)]),
-    {
-      tipo: 'rex',
-      celdas: fotograma(estadoRex(vistas, fichas), n, adornoHoy(d, ahora)),
-      lado: [...lineaContadores(vistas, d, anchoTexto), [], ...ejecutandose(vistas, n, anchoTexto, arriba)].map(x => ajustar(x, anchoTexto)),
-      ladoAncho: anchoTexto,
-    },
-    lineas([
-      ...bloqueRexTexto(vistas, fichas, d),
-      regla(w),
-      ...columnas(progreso(fichas, izq), [...contexto(vistas, der), ...alertas(vistas, d, ahora)], izq, der),
-      regla(w),
-      ...columnas(actividad(d), siguiente(vistas, d), izq, der),
-      regla(w),
-      ...uso(d, ahora, w),
-      pie(d, w),
-    ]),
-  ]
+function tarjetaRex(c: Ctx, w: number, escala: 1 | 2, alto?: number): Linea[] {
+  const estado = estadoRex(c.vistas, c.fichas)
+  const dentro = interior(w, c.aire)
+  const sprite = comoLineas(fotograma(estado, c.n, adornoHoy(c.d, c.ahora), escala)).map(l => centrar(l, dentro))
+  const globo = partir(`“${bocadillo(estado, c.vistas, c.fichas)}”`, dentro, 2).map(t =>
+    centrar([s(t, estado === 'alerta' ? { c: COLOR.ambar, b: true } : { b: true })], dentro),
+  )
+  const pieRex = centrar([s(`${textoRacha(racha(c.d.dias))} · nivel ${nivel(c.d.turnosTotales)}`, gris)], dentro)
+  return tarjeta([...sprite, ...globo, pieRex], { titulo: 'Rex', derecha: [s(estado, gris)], ancho: w, aire: c.aire, ...(alto ? { alto } : {}) })
 }
 
-/** En la disposición ancha, el bocadillo de Rex va en una línea bajo su dibujo. */
-function bloqueRexTexto(vistas: SesionVista[], fichas: FichaPanel[], d: DatosPanel): Linea[] {
-  const estado = estadoRex(vistas, fichas)
-  return [[s(`Rex · “${bocadillo(estado, vistas, fichas)}”`, estado === 'alerta' ? { c: COLOR.ambar, b: true } : { b: true }), s(`   ${textoRacha(racha(d.dias))} · nivel ${nivel(d.turnosTotales)}`, { c: COLOR.gris })]]
+function filasEjecucion(c: Ctx): number {
+  return c.vistas.length + c.vistas.reduce((a, v) => a + v.agentes.length, 0)
+}
+
+function tarjetaEjecucion(c: Ctx, w: number, alto: number): Linea[] {
+  const dentro = interior(w, c.aire)
+  const max = Math.max(1, alto - 2)
+  const filas: Linea[] = []
+  if (c.vistas.length === 0) filas.push([s('ninguna sesión abierta', gris)])
+  const wNombre = Math.min(28, Math.max(16, Math.floor(dentro * 0.4)))
+  const wRol = 9
+  const wDetalle = Math.max(6, dentro - wNombre - wRol - 4)
+  for (const v of c.vistas) {
+    const color = colorEstado(v.estado)
+    const detalle = v.estado === 'inactiva' ? `inactiva ${duracion(v.quietaMin)}` : v.s.detalle
+    filas.push([
+      s('● ', { c: color }),
+      ...col(v.etiqueta, wNombre, v.estado === 'inactiva' ? { d: true } : {}),
+      ...col('sesión', wRol, gris),
+      ...col(detalle, wDetalle, v.estado === 'te_espera' ? { c: COLOR.ambar } : { c: COLOR.grisClaro }),
+      s(` ${icono(v.estado, c.n)}`, { c: color }),
+    ])
+    for (const a of v.agentes) {
+      filas.push([
+        s('└ ', gris),
+        ...col(a.id, wNombre, { c: a.color }),
+        ...col(a.tipo, wRol, { c: a.color }),
+        ...col(a.estado === 'trabajando' ? a.descripcion : `${a.descripcion} · ${a.detalle}`, wDetalle, { c: COLOR.grisClaro }),
+        s(` ${icono(a.estado, c.n + 1)}`, { c: colorEstado(a.estado) }),
+      ])
+    }
+  }
+  const visibles = filas.length > max ? [...filas.slice(0, max - 1), [s(`… y ${filas.length - (max - 1)} más`, gris)]] : filas
+  return tarjeta(visibles, {
+    titulo: 'Ejecutándose ahora',
+    derecha: [s(`${c.vistas.length} ${c.vistas.length === 1 ? 'sesión' : 'sesiones'}`, gris)],
+    ancho: w,
+    alto,
+    aire: c.aire,
+  })
+}
+
+function tarjetaProgreso(c: Ctx, w: number, alto?: number): Linea[] {
+  const dentro = interior(w, c.aire)
+  const lineas: Linea[] = []
+  const wNombre = Math.min(14, Math.max(6, ...c.fichas.map(f => f.carpeta.length)))
+  const wFase = Math.max(0, Math.min(16, dentro - wNombre - 18))
+  const wBarra = Math.max(4, dentro - wNombre - 1 - (wFase > 0 ? wFase + 1 : 0) - 5)
+  const filaProyecto = (nombre: Linea, fase: string, pct: number | null, completo: boolean, apagada = false): Linea => [
+    ...ajustar(nombre, wNombre + 1),
+    ...(wFase > 0 ? col(fase, wFase + 1, gris) : []),
+    ...barraSuave(pct, wBarra, completo ? COLOR.verde : COLOR.verdeOscuro),
+    s(apagada ? '   0%' : pct === null ? '    —' : `${String(pct).padStart(4)}%`, pct === null || apagada ? gris : {}),
+  ]
+  for (const f of c.fichas) {
+    const fase = [f.fase, f.tareas.total > 0 ? `${f.tareas.hechas}/${f.tareas.total}` : ''].filter(Boolean).join(' · ') || '—'
+    lineas.push(filaProyecto([s(f.carpeta)], fase, f.pct, f.pct === 100))
+  }
+  if (c.fichas.length === 0) {
+    // Estado vacío con intención: la forma de la tarjeta, a cero, y qué hacer.
+    for (let i = 0; i < 3; i++) lineas.push(filaProyecto([s('·', gris)], '', 0, false, true))
+    lineas.push([s(`${c.d.enSeguimiento} de ${c.d.carpetasTotal} en seguimiento`, { c: COLOR.ambar }), s(' · /proyectos', gris)])
+  } else if (c.d.enSeguimiento > c.fichas.length) {
+    lineas.push([s(`${c.d.enSeguimiento - c.fichas.length} sin ficha · /proyectos`, gris)])
+  }
+  return tarjeta(lineas, {
+    titulo: 'Progreso por proyecto',
+    derecha: [s(`${c.d.enSeguimiento} de ${c.d.carpetasTotal}`, gris)],
+    ancho: w,
+    aire: c.aire,
+    ...(alto ? { alto } : {}),
+  })
+}
+
+function tarjetaContexto(c: Ctx, w: number): Linea[] {
+  const dentro = interior(w, c.aire)
+  const vivas = c.vistas.filter(v => v.estado !== 'inactiva')
+  const wNombre = Math.max(10, Math.min(24, dentro - 16))
+  const wBarra = Math.max(4, dentro - wNombre - 1 - 5)
+  const lineas: Linea[] = vivas.map(v => {
+    const pct = v.s.contexto_pct
+    return [
+      ...col(v.etiqueta.replace(' · ', '·'), wNombre + 1),
+      ...barraSuave(pct, wBarra, pct === null ? COLOR.gris : colorPorcentaje(pct)),
+      s(pct === null ? '  n/d' : `${String(pct).padStart(4)}%`, pct === null ? gris : {}),
+    ]
+  })
+  if (lineas.length === 0) lineas.push([s('sin sesiones vivas', gris)])
+  return tarjeta(lineas, { titulo: 'Contexto por sesión', ancho: w, aire: c.aire })
+}
+
+function tarjetaAlertas(c: Ctx, w: number, alto?: number): Linea[] {
+  const lista = listaAlertas(c)
+  const max = alto === undefined ? 5 : Math.max(1, alto - 2)
+  let lineas: Linea[] = lista.map(a => [s('▲ ', { c: a.nivel === 'grave' ? COLOR.rojo : COLOR.ambar }), s(a.texto)])
+  if (lineas.length > max) lineas = [...lineas.slice(0, max - 1), [s(`… y ${lista.length - (max - 1)} más`, gris)]]
+  if (lineas.length === 0) lineas.push([s('ninguna', gris)])
+  return tarjeta(lineas, {
+    titulo: 'Alertas',
+    derecha: lista.length > 0 ? [s(String(lista.length), { c: COLOR.ambar })] : [],
+    ancho: w,
+    aire: c.aire,
+    ...(alto ? { alto } : {}),
+  })
+}
+
+export type DiaSemana = { dia: string; letra: string; turnos: number | null; commits: number | null; hoy: boolean }
+
+/** De lunes a domingo de la semana en curso, con los datos de los últimos 7 días; lo futuro, sin dato. */
+export function semana(d: DatosPanel, ahora: number): DiaSemana[] {
+  const desdeLunes = (local(ahora, d.desfase).getUTCDay() + 6) % 7
+  const porDia = new Map(d.dias.map(x => [x.dia, x]))
+  const out: DiaSemana[] = []
+  for (let i = 0; i < 7; i++) {
+    const dia = local(ahora + (i - desdeLunes) * 86_400_000, d.desfase).toISOString().slice(0, 10)
+    const futuro = i > desdeLunes
+    const dato = porDia.get(dia)
+    out.push({
+      dia,
+      letra: LETRA[(i + 1) % 7]!,
+      turnos: futuro ? null : (dato?.turnos ?? 0),
+      commits: futuro ? null : (dato?.commits ?? null),
+      hoy: i === desdeLunes,
+    })
+  }
+  return out
+}
+
+/** Alto de las barras de actividad, en filas. */
+const ALTO_ACTIVIDAD = 4
+
+function tarjetaActividad(c: Ctx, w: number, alto?: number): Linea[] {
+  const dentro = interior(w, c.aire)
+  const dias = semana(c.d, c.ahora)
+  const maxT = Math.max(0, ...dias.map(x => x.turnos ?? 0))
+  const maxC = Math.max(0, ...dias.map(x => x.commits ?? 0))
+  const hueco = Math.max(3, Math.floor(dentro / 7))
+  // Con sitio, cada barra ocupa 2 columnas (4 por día); si no, 1.
+  const grosor = hueco >= 8 ? 2 : 1
+  const par = grosor * 2
+  const margen = Math.max(0, Math.floor((dentro - hueco * 7) / 2))
+  const izq = Math.floor((hueco - par) / 2)
+  const cols = dias.map(x => ({ c: columnaVertical(x.commits, maxC, ALTO_ACTIVIDAD), t: columnaVertical(x.turnos, maxT, ALTO_ACTIVIDAD) }))
+  const lineas: Linea[] = []
+  for (let r = 0; r < ALTO_ACTIVIDAD; r++) {
+    const l: Linea = [s(' '.repeat(margen))]
+    for (const x of cols) {
+      const a = x.c[r]!
+      const b = x.t[r]!
+      l.push(
+        s(' '.repeat(izq)),
+        s(a.ch.repeat(grosor), { c: a.apagada ? APAGADO : COLOR.morado }),
+        s(b.ch.repeat(grosor), { c: b.apagada ? APAGADO : COLOR.verde }),
+        s(' '.repeat(hueco - par - izq)),
+      )
+    }
+    lineas.push(l)
+  }
+  const letras: Linea = [s(' '.repeat(margen))]
+  for (const x of dias) {
+    const li = Math.floor((hueco - 1) / 2)
+    letras.push(s(' '.repeat(li)), s(x.letra, x.hoy ? { c: CORAL_CLARO, b: true } : gris), s(' '.repeat(hueco - 1 - li)))
+  }
+  lineas.push(letras)
+  const sinCommits = c.d.dias.every(x => x.commits === null)
+  return tarjeta(lineas, {
+    titulo: 'Actividad',
+    derecha: [s('■', { c: COLOR.morado }), s(sinCommits ? ' commits n/d ' : ' commits ', gris), s('■', { c: COLOR.verde }), s(' turnos', gris)],
+    ancho: w,
+    aire: c.aire,
+    ...(alto ? { alto } : {}),
+  })
+}
+
+function tarjetaSiguiente(c: Ctx, w: number, alto?: number): Linea[] {
+  const dentro = interior(w, c.aire)
+  const porReglas = c.d.siguiente.length === 0
+  const acciones = porReglas ? accionesPorReglas(c.vistas, c.d.git ?? {}) : c.d.siguiente
+  const max = alto === undefined ? 6 : Math.max(1, alto - 2)
+  const lineas: Linea[] = []
+  acciones.forEach((a, i) => {
+    const trozos = partir(a, dentro - 3, Math.max(1, Math.floor(max / Math.max(1, acciones.length))))
+    trozos.forEach((t, j) => lineas.push([s(j === 0 ? `${i + 1}. ` : '   ', gris), s(t)]))
+  })
+  if (lineas.length === 0) lineas.push([s('nada pendiente', gris)], [s('/refresh para que Claude proponga', gris)])
+  return tarjeta(lineas.slice(0, max), {
+    titulo: 'Siguiente acción',
+    derecha: porReglas && acciones.length > 0 ? [s('por reglas', gris)] : [],
+    ancho: w,
+    aire: c.aire,
+    ...(alto ? { alto } : {}),
+  })
+}
+
+function tarjetasUso(c: Ctx, anchos: readonly number[]): Linea[][] {
+  const u = c.d.uso
+  const e = c.d.usoEstimado ?? null
+  const una = (titulo: string, pct: number | null, aprox: boolean, pieUso: string, w: number): Linea[] => {
+    const dentro = interior(w, c.aire)
+    const etiqueta = pct === null ? 'n/d' : `${aprox ? '≈' : ''}${Math.round(pct)}%`
+    const barra = barraSuave(pct === null ? null : Math.min(100, pct), Math.max(4, dentro - etiqueta.length - 1), pct === null ? COLOR.gris : colorPorcentaje(pct))
+    return tarjeta([[...barra, s(' '), s(etiqueta, pct === null ? gris : { b: true })], [s(pieUso, gris)]], { titulo, ancho: w, aire: c.aire })
+  }
+  const w0 = anchos[0] ?? 20
+  const w1 = anchos[1] ?? 20
+  const reinicioEstimado = e && e.reinicioSemana !== null ? reinicio(new Date(e.reinicioSemana).toISOString(), c.ahora, c.d.desfase) : 'reinicio n/d'
+  const cinco = u?.cinco_horas
+    ? una('Sesión 5 h', u.cinco_horas.pct, false, reinicio(u.cinco_horas.reinicia, c.ahora, c.d.desfase), w0)
+    : u === null && e && e.cinco_horas !== null
+      ? una('Sesión 5 h', e.cinco_horas, true, 'ventana móvil de 5 h', w0)
+      : una('Sesión 5 h', null, false, 'n/d · configúralo en config.json', w0)
+  const sem = u?.semana
+    ? una('Semana', u.semana.pct, false, reinicio(u.semana.reinicia, c.ahora, c.d.desfase), w1)
+    : u === null && e && e.semana !== null
+      ? una('Semana', e.semana, true, reinicioEstimado, w1)
+      : una('Semana', null, false, 'n/d · configúralo en config.json', w1)
+  return [cinco, sem]
+}
+
+function pie(c: Ctx, w: number): Linea {
+  return extremos(
+    [s(' /oficina · /refresh · /preguntar · /abrir', gris)],
+    c.d.sinClasificar > 0 ? [s(`${c.d.sinClasificar} sin clasificar `, { c: COLOR.ambar })] : [],
+    w,
+  )
+}
+
+/** La cabecera (a la derecha de las pestañas): carpeta, fecha y el último /refresh. */
+export function cabecera(d: DatosPanel | null, ahora: number, w: number): Linea {
+  if (d === null) return ajustar([s(' huddle', { c: COLOR.titulo, b: true })], w)
+  const refresh = d.ultimoRefresh === null ? 'sin /refresh' : `refresh hace ${duracion((ahora - d.ultimoRefresh) / 60_000)}`
+  return ajustar(extremos([s(' huddle', { c: COLOR.titulo, b: true }), s(` · ${d.raiz}`, gris)], [s(`${fechaCabecera(ahora, d.desfase)} · ${refresh} `, gris)], w), w)
+}
+
+// ------------------------------------------------------------- composición
+
+export type Modo = 'estrecho' | 'compacto' | 'ancho'
+
+export function modoDe(w: number): Modo {
+  return w < 70 ? 'estrecho' : w <= 90 ? 'compacto' : 'ancho'
+}
+
+/** El cuerpo del panel para `w` columnas y `h` filas (sin la fila de pestañas). */
+export function componerPanel(d: DatosPanel | null, w: number, h: number, n: number, ahora: number): Linea[] {
+  const total = Math.max(30, w)
+  if (d === null) return [ajustar([s(' Leyendo la carpeta de control…', gris)], total)]
+  const modo = modoDe(total)
+  const hueco = modo === 'ancho' ? 2 : 1
+  const c: Ctx = {
+    d,
+    vistas: vistaSesiones(d.sesiones, ahora, d.inactiva_min),
+    fichas: fichasPanel(d, ahora),
+    n,
+    ahora,
+    aire: modo === 'ancho' ? 2 : 1,
+  }
+  const dosCol = repartir(total, [1, 1], hueco)
+
+  if (modo === 'estrecho') {
+    const k = kpis(c, [...dosCol, ...dosCol])
+    const lineas = [
+      ...fila([k[0]!, k[1]!], dosCol, hueco),
+      ...fila([k[2]!, k[3]!], dosCol, hueco),
+      ...tarjetaRex(c, total, 1),
+      ...tarjetaEjecucion(c, total, Math.min(10, 2 + Math.max(1, filasEjecucion(c)))),
+      ...tarjetaProgreso(c, total),
+      ...tarjetaContexto(c, total),
+      ...tarjetaAlertas(c, total),
+      ...tarjetaActividad(c, total),
+      ...tarjetaSiguiente(c, total),
+      ...fila(tarjetasUso(c, dosCol), dosCol, hueco),
+      pie(c, total),
+    ]
+    return lineas.map(l => ajustar(l, total))
+  }
+
+  const cuatro = repartir(total, [1, 1, 1, 1], hueco)
+  const filaKpis = fila(kpis(c, cuatro), cuatro, hueco)
+
+  // Progreso | Contexto + Alertas, igualadas en alto.
+  const contexto = tarjetaContexto(c, dosCol[1]!)
+  const alto3 = Math.max(tarjetaProgreso(c, dosCol[0]!).length, contexto.length + tarjetaAlertas(c, dosCol[1]!).length)
+  const fila3 = fila([tarjetaProgreso(c, dosCol[0]!, alto3), [...contexto, ...tarjetaAlertas(c, dosCol[1]!, alto3 - contexto.length)]], dosCol, hueco)
+
+  // Actividad | Siguiente acción.
+  const alto4 = Math.max(tarjetaActividad(c, dosCol[0]!).length, tarjetaSiguiente(c, dosCol[1]!).length)
+  const fila4 = fila([tarjetaActividad(c, dosCol[0]!, alto4), tarjetaSiguiente(c, dosCol[1]!, alto4)], dosCol, hueco)
+
+  const filaUso = fila(tarjetasUso(c, dosCol), dosCol, hueco)
+
+  // Rex + Ejecutándose ahora, con lo que quede de alto. Rex a 2× solo si sobra.
+  const resto = h - filaKpis.length - fila3.length - fila4.length - filaUso.length - 1
+  const naturalEjec = 2 + Math.max(1, filasEjecucion(c))
+  const doble = modo === 'ancho' && resto >= tamano(2).filas + 5
+  const anchoRex = doble ? tamano(2).columnas + 2 + 2 * c.aire : modo === 'ancho' ? 30 : 28
+  const altoRex = tarjetaRex(c, anchoRex, doble ? 2 : 1).length
+  const altoFila2 = Math.max(altoRex, Math.min(naturalEjec, resto))
+  const anchoEjec = total - anchoRex - hueco
+  const fila2 = fila([tarjetaRex(c, anchoRex, doble ? 2 : 1, altoFila2), tarjetaEjecucion(c, anchoEjec, altoFila2)], [anchoRex, anchoEjec], hueco)
+
+  return [...filaKpis, ...fila2, ...fila3, ...fila4, ...filaUso, pie(c, total)].map(l => ajustar(l, total))
 }

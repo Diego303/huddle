@@ -4,9 +4,9 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, RenderElement, RenderInput } from 'claude-code'
 
-import { dibujar } from '../mod/dibujar.tsx'
-import { componerOficina } from '../mod/oficina.ts'
-import { componerPanel } from '../mod/panel.ts'
+import { dibujar, linea } from '../mod/dibujar.tsx'
+import { componerOficina, resumenOficina } from '../mod/oficina.ts'
+import { cabecera, componerPanel } from '../mod/panel.ts'
 import type { ModoOficina } from '../types/index.d.ts'
 
 import { usoDe } from './estado.ts'
@@ -89,6 +89,17 @@ export async function abrirOficina($: EngineInterface, args: string): Promise<st
   return r.isPlaced ? `Oficina · ${modo}.` : `El panel no cabe ahora: ${r.reason ?? 'sin motivo'}`
 }
 
+const CORAL = '#D85A30'
+const OSCURO = '#1a1a18'
+const PILDORA_APAGADA = '#30302d'
+
+type Pestana = { key: string; etiqueta: string; tecla: string; activa: boolean; pulsar: () => void }
+
+/** Ancho de una fila de pestañas: cada una se dibuja `p: ` + ` etiqueta `, con un espacio entre ellas. */
+export function anchoPestanas(etiquetas: readonly string[]): number {
+  return etiquetas.reduce((n, e) => n + 3 + e.length + 2, 0) + Math.max(0, etiquetas.length - 1)
+}
+
 /** El hook `ui.render` del panel: lee los datos publicados y dibuja la vista que toque. */
 export async function pintarPanel($: EngineInterface, e: RenderInput<'Pane'>): Promise<RenderElement> {
   const json = await read($, datosAtom)
@@ -102,25 +113,37 @@ export async function pintarPanel($: EngineInterface, e: RenderInput<'Pane'>): P
     datos = null
   }
   const t = $.ui.resolve(e)
-  const { Box, Button } = t
-  // Teclas: funcionan cuando el panel tiene el foco (ctrl+x tab o un clic).
-  const botones = (
-    <Box flexDirection="row">
-      <Button key="vista-panel" label="Panel" hotkey="p" {...(vista === 'panel' ? { variant: 'primary' as const } : {})} onPress={() => update($, vistaAtom, () => 'panel')} />
-      <Button key="vista-oficina" label="Oficina" hotkey="o" {...(vista === 'oficina' ? { variant: 'primary' as const } : {})} onPress={() => update($, vistaAtom, () => 'oficina')} />
-      {vista === 'oficina' && (
-        <Button key="modo-sesiones" label="Sesiones" hotkey="s" {...(modo === 'sesiones' ? { variant: 'primary' as const } : {})} onPress={() => update($, modoAtom, () => 'sesiones')} />
-      )}
-      {vista === 'oficina' && (
-        <Button key="modo-agentes" label="Agentes" hotkey="a" {...(modo === 'agentes' ? { variant: 'primary' as const } : {})} onPress={() => update($, modoAtom, () => 'agentes')} />
-      )}
-    </Box>
-  )
+  const { Box, Button, Text } = t
   const ahora = Date.now()
   const columnas = e.props.bodyColumns
-  const bloques =
-    vista === 'oficina'
-      ? [{ tipo: 'lineas' as const, lineas: componerOficina(datos, modo, columnas, n, ahora) }]
-      : componerPanel(datos, columnas, e.props.scroll.bodyRows - 1, n, ahora)
-  return dibujar(t, bloques, botones)
+  const filas = e.props.scroll.bodyRows
+
+  // Pestañas como píldoras: la activa en coral con texto oscuro, el resto en gris.
+  // Sus teclas (p, o, s, a) funcionan cuando el panel tiene el foco (ctrl+x tab).
+  const pestanas: Pestana[] = [
+    { key: 'vista-panel', etiqueta: 'Panel', tecla: 'p', activa: vista === 'panel', pulsar: () => void update($, vistaAtom, () => 'panel') },
+    { key: 'vista-oficina', etiqueta: 'Oficina', tecla: 'o', activa: vista === 'oficina', pulsar: () => void update($, vistaAtom, () => 'oficina') },
+    ...(vista === 'oficina'
+      ? [
+          { key: 'modo-sesiones', etiqueta: 'Sesiones', tecla: 's', activa: modo === 'sesiones', pulsar: () => void update($, modoAtom, () => 'sesiones') },
+          { key: 'modo-agentes', etiqueta: 'Agentes', tecla: 'a', activa: modo === 'agentes', pulsar: () => void update($, modoAtom, () => 'agentes') },
+        ]
+      : []),
+  ]
+  const ocupado = anchoPestanas(pestanas.map(p => p.etiqueta))
+  const resto = Math.max(0, columnas - ocupado)
+  const textoCabecera = vista === 'oficina' ? resumenOficina(datos, ahora, resto) : cabecera(datos, ahora, resto)
+  const fila = (
+    <Box flexDirection="row">
+      {pestanas.flatMap((p, i) => [
+        ...(i > 0 ? [<Text> </Text>] : []),
+        <Button key={p.key} plain hotkey={p.tecla} onPress={p.pulsar}>
+          <Text {...(p.activa ? { backgroundColor: CORAL, color: OSCURO, bold: true } : { backgroundColor: PILDORA_APAGADA, color: '#888780' })}>{` ${p.etiqueta} `}</Text>
+        </Button>,
+      ])}
+      {resto > 0 ? linea(t, textoCabecera) : null}
+    </Box>
+  )
+  const cuerpo = vista === 'oficina' ? componerOficina(datos, modo, columnas, n, ahora) : componerPanel(datos, columnas, filas - 1, n, ahora)
+  return dibujar(t, cuerpo, fila)
 }

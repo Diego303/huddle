@@ -278,3 +278,24 @@ huddle/
 - `/mnt/d/huddle-pruebas` se borró al terminar.
 - **Comandos solo donde sirven** (pedido por el usuario el 2026-10-31): en la carpeta de control, los 11; sin configurar, solo `/configurar`; en cualquier otra sesión, ninguno, de modo que es Claude normal más un hook que anota el estado. El registro espera a saber si la sesión es la torre (`situacion()` de `lib/sesion.ts`). Tras un `/configurar` que funciona, la sesión pasa a ser la torre en el momento: registra los comandos y abre el panel.
 - **Alcances de instalación** (según `claude plugin install|enable|disable --help`): `user`, `project` y `local`, y se activa o desactiva por alcance. Están en la sección «Dónde se activa» del README.
+
+## 12. Pase visual del panel (2026-10-31)
+
+Se acercó el panel a la maqueta con lo que permite el terminal. Lo que hay y cómo se ha hecho:
+
+1. **Tarjetas:** `tarjeta()` en `mod/lienzo.ts` las dibuja como texto: `╭─ Título ──╮`, el título en coral claro (`#F0997B`), el contenido con fondo `#21211f` en todas sus celdas y `╰──╯` debajo. El motor no pone títulos dentro del borde de un `Box`, y así cada línea mide exactamente su ancho y se puede volcar como texto.
+2. **KPIs:** cuatro tarjetas iguales con números de 3×3 (una fuente de 3×5 píxeles en medios bloques `▀ █ ▄`, `mod/digitos.ts`), el sufijo pequeño al lado y una línea de detalle con alternativas más cortas si no cabe. En ancho, el detalle va en tres líneas a la derecha de los dígitos.
+3. **Barras suaves:** `barraSuave()`, en octavos `▏▎▍▌▋▊▉█` sobre una pista `#30302d`. Sin dato, la pista vacía, sin relleno punteado. Contexto y uso, por umbral: azul < 60, ámbar 60–80, rojo ≥ 80.
+4. **Rex a 1×:** un lienzo de 14×10 píxeles (los 10 del sprite y 4 para `!`, `z`, `✦` y la calabaza) en 14×5 celdas, dentro de su tarjeta con el bocadillo y la racha debajo. A 2× (28×10) solo en ancho y si sobran filas. Deja de usarse `Raster`: Rex son celdas de texto, para poder meterlo en la tarjeta y que salga en el volcado. **Corregido un fallo que ya existía:** una celda con color solo en la mitad de abajo se dibujaba `▀` con el primer plano por defecto, así que salía media celda blanca encima; ahora es `▄`.
+5. **Actividad:** de lunes a domingo de la semana en curso; los días futuros, apagados. Commits y turnos en pares por día, con barras verticales de 4 filas (`▁…█`, resolución de 1/8). Sin valor, un `▁` apagado en la base. Hoy, resaltado. En ancho, cada barra mide 2 columnas.
+6. **Rejilla:** tres modos según el ancho.
+   - **compacto (70–90):** KPIs 4×1; Rex con «Ejecutándose ahora»; progreso junto a contexto y alertas; actividad junto a siguiente acción; uso (5 h y semana) al pie. Las tarjetas de una fila se igualan en alto.
+   - **ancho (> 90):** la misma rejilla con más aire.
+   - **estrecho (< 70):** KPIs 2×2 y una tarjeta por fila.
+7. **Estados vacíos:** sin proyectos en seguimiento, la tarjeta muestra tres filas a 0 % y «0 de 37 en seguimiento · /proyectos». `DatosPanel` trae ahora `enSeguimiento` y `carpetasTotal`. Sin actividad, el eje con sus `▁` apagados; sin commits, «commits n/d».
+8. **Pestañas como píldoras:** botones `plain` con un `Text` de fondo dentro: la activa en coral con el texto oscuro, el resto en gris. Con tecla asignada, el motor antepone `p:` en el color de acento (`p:  Panel  o:  Oficina`), lo que además indica la tecla.
+9. **Oficina:** cada empleado es un sprite de 14×10 píxeles (persona, mesa, monitor y teclado) en 14×5 celdas. El monitor lleva el color del estado: verde con parpadeo si trabaja, ámbar si espera, gris en pausa y apagado si está inactivo. Las salas son tarjetas en rejilla que reparten todo el ancho, con varias mesas por fila, centradas.
+
+**Color:** el motor baja solo a 256 o 16 colores según el terminal. En tmux sin `COLORTERM` bajó a 16, y ahí `#21211f` y `#30302d` se convierten en negro, así que el fondo de las tarjetas no se distingue. En Windows Terminal, que tiene truecolor, se ven los colores exactos; con `COLORTERM=truecolor`, tmux los guarda en 256 (fondo 235, píldora 173).
+
+**Rendimiento:** el panel se redibuja cada 600 ms. Los tramos contiguos con el mismo estilo se juntan en un solo `Text` (`compactar`).
