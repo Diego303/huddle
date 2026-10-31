@@ -157,7 +157,7 @@ DrvFs no distingue mayúsculas, y `realpath` conserva la grafía con la que se e
 
 | # | Plan | Propuesta |
 |---|---|---|
-| 1 | Dos pantallas a vista completa | **Un panel con dos vistas**, Panel y Oficina. `/panel`, `/oficina [sesiones\|agentes]` y botones con tecla `p` · `o` · `s` · `a` cuando el panel tiene el foco. Dos disposiciones: **ancha** (`inline`, ≥ 100 columnas, se pide `rows` alto) y **compacta** (`dock` de unas 89 columnas, o terminal estrecho) |
+| 1 | Dos pantallas a vista completa | **Un panel con dos vistas**, Panel y Oficina. `/panel`, `/oficina [sesiones\|agentes]` y botones con tecla `p` · `o` · `s` · `a` cuando el panel tiene el foco. **Decidido con el usuario (2026-10-31): el diseño principal es el de pantalla completa**, con el chat y el prompt a la izquierda y el panel acoplado a la derecha (`dock`, unas 89 columnas, todo el alto). La disposición ancha (`inline`, ≥ 100 columnas) queda como secundaria |
 | 2 | `te_espera` con `Notification`; `en_pausa` con `Stop` | `te_espera` con `classic.PermissionRequest` (+ `Notification` de tipo `permission_prompt` / `elicitation_dialog`); vuelve a `trabajando` cuando termina el `tool.call`; `en_pausa` con el `turn.complete` principal |
 | 3 | Subagentes cerrados en `PostToolUse` o `SubagentStop` | Alta en el `tool.call` de `Agent`/`Task`; cierre en `SubagentStop` o en `turn.complete` con `agentId`; reconciliación con `$.agent.list()` |
 | 4 | Contexto leyendo el final del transcript | `$.session.usage().context.percent` en cada `turn.complete` |
@@ -193,3 +193,14 @@ huddle/
 - La instalación real desde GitHub se probará en la Fase 7, con el repo publicado.
 - Los tiempos en `/mnt/d` con repos reales (`/refresh` sobre 10 repos en menos de 10 s) se medirán en la Fase 5.
 - Sesiones que mueren sin `SessionEnd` (terminal cerrado de golpe): se ven como `inactiva` y `/refresh` las limpia. Claude Code guarda un registro propio de sesiones vivas en `~/.claude/sessions/`, pero no está documentado y Huddle no lo usa.
+
+## 5. Decisiones de la Fase 1
+
+- **`HUDDLE_CONFIG`:** si esta variable existe, la config se lee y se escribe ahí, no en `~/.config/huddle/config.json`. Sirve para probar sin tocar la config real. También se respeta `XDG_CONFIG_HOME`.
+- **`/configurar [raíz]`:** la carpeta de control es el directorio de la sesión. Si no se da la raíz, se pregunta con el diálogo de Claude Code. Propone la carpeta padre y tu `HOME`, y en «Type something» se puede escribir otra ruta. Sin nadie a quien preguntar (`-p`), usa la carpeta padre. Nunca sobrescribe: si `PROYECTOS.md` ya existe, solo apunta las carpetas nuevas. Si la carpeta de control está dentro de la raíz, entra directamente en «No hacer seguimiento».
+- **Rutas que escribe la persona:** `D:\Github` se convierte en `/mnt/d/Github`, `~` se expande y una ruta relativa se resuelve desde el directorio de la sesión.
+- **Escaneo de la raíz:** solo se listan los nombres de primer nivel. Se descartan los ocultos (`.x`), los enlaces simbólicos (`$.fs.list` los marca como `other`), `$RECYCLE.BIN` y `System Volume Information`.
+- **Fichas:** las crean `/proyectos` (y `/configurar` cuando vuelve a escanear) para cada carpeta en seguimiento que no tenga ficha. El README se lee con `head -n 40`, para no cargar el fichero entero, y solo una vez: si la ficha existe, no se vuelve a abrir. El objetivo propuesto es la primera frase de texto corrido y se marca «(propuesto a partir del README)». Si no hay ninguna, queda «(por definir)». La plantilla de ficha es `GENERAL/proyectos/_plantilla.md`, que puedes editar; si no existe, se usa la del mod.
+- **`PROYECTOS.md`:** se edita como texto, añadiendo líneas al final de «Sin clasificar». Si una carpeta aparece en «No hacer seguimiento» y en otra sección, gana «No hacer seguimiento». Se avisa de duplicados y de códigos repetidos. Las carpetas que ya no existen se avisan, pero no se borran.
+- **Validador:** las funciones que reciben `$` están en el nivel superior de su fichero (`lib/`). Los hooks de comando capturan cualquier error y lo devuelven como salida del comando.
+- **Prueba real (2026-10-31):** con `HUDDLE_CONFIG` temporal, en `/mnt/d/huddle-pruebas` (repos de prueba creados con permiso), `/configurar`, `/proyectos` y `/directorio D:\huddle-pruebas` funcionan en una sesión real. Lo que no tiene que ver con la prueba no se ha tocado.

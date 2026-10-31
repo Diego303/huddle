@@ -1,0 +1,16 @@
+{
+  "name": "huddle",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Mod de Claude Code: panel de sesiones, agentes y proyectos",
+  "license": "MIT",
+  "type": "module",
+  "packageManager": "pnpm@12.6.0",
+  "scripts": {
+    "test": "claude plugin test .",
+    "lint": "tsc -p . && claude plugin validate ."
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

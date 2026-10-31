@@ -1,0 +1,8 @@
+{
+  "name": "huddle",
+  "version": "0.1.0",
+  "description": "Tu equipo de Claude Code, de un vistazo: proyectos, sesiones y agentes en un solo panel.",
+  "author": { "name": "Huddle" },
+  "license": "MIT",
+  "keywords": ["panel", "sesiones", "agentes", "proyectos", "dashboard"]
+}

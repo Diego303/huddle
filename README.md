@@ -99,10 +99,13 @@ Los hooks del mod se ejecutan en cada sesión de Claude Code y anotan su estado 
 
 ```bash
 pnpm install
-pnpm test
+pnpm test     # claude plugin test .
+pnpm lint     # tsc + claude plugin validate .
 ```
 
-Usa pnpm, no npm ni yarn.
+Usa pnpm, no npm ni yarn. Los tipos del sistema de mods los escribe Claude Code en `.claude-plugin/types/` la primera vez que cargas el mod desde la carpeta (`claude --plugin-dir .`); sin ellos, `tsc` no encuentra `claude-code`.
+
+Para probar sin tocar tu config real, usa `HUDDLE_CONFIG=/tmp/huddle/config.json claude --plugin-dir .`.
 
 ## Notas para WSL
 
