@@ -92,7 +92,8 @@ p:  Panel  o:  Oficina  s:  Sesiones  a:  Agentes  oficina 5 sesiones · 2 traba
 - **Un compañero en el panel**: Rex, un pequeño dinosaurio de píxeles que duerme, trabaja, se pone en alerta o celebra según el estado real de tus sesiones. Se disfraza el 31 de octubre y en diciembre.
 - **Carpeta de control en Markdown**: `ESTADO.md`, una ficha por proyecto y un diario mensual. Sin base de datos.
 - **Avisos de escritorio** cuando una sesión necesita tu aprobación, también en Windows desde WSL.
-- **Consultas a otras sesiones** con `/preguntar`, en modo solo lectura.
+- **Consultas a otras sesiones** con `/preguntar`, en modo solo lectura, y **fichas rellenadas por Claude** con `/fichas`.
+- **Vista web en vivo** con `/huddle web`: el Panel, la Oficina (clásica, isométrica o en torre) y la pestaña **Actividad**, con las sesiones atascadas, el cronograma del día, la bitácora de cada sesión con buscador y el uso por proyecto.
 
 ## Requisitos
 
@@ -165,11 +166,35 @@ Los comandos no llevan prefijo (`/refresh`, no `/huddle:refresh`). Sus respuesta
 
 ## Vista web
 
-`/huddle web` (en la carpeta de control) crea `.agentos/web/dashboard.html` y lo abre en el navegador: en WSL, en el de Windows, con `explorer.exe`, o con `wslview` si lo tienes; en Linux, con `xdg-open`; en macOS, con `open`. Es un único fichero autocontenido, sin CDN ni peticiones de red, con el Panel y la Oficina como pestañas y el tema claro u oscuro del sistema.
+`/huddle web` (en la carpeta de control) crea `.agentos/web/dashboard.html` y lo abre en el navegador: en WSL, en el de Windows, con `explorer.exe`, o con `wslview` si lo tienes; en Linux, con `xdg-open`; en macOS, con `open`. Es un único fichero autocontenido, sin CDN ni peticiones de red, con el Panel, la Oficina y la Actividad como pestañas, y el tema claro u oscuro del sistema.
 
 Se actualiza sola: cada 2 s vuelve a leer `.agentos/web/datos.js` (una línea `window.HUDDLE = {...}`, que escriben tus sesiones en cada evento y `/refresh`) y repinta solo lo que cambió, sin perder la pestaña ni el scroll. Mientras no ejecutes `/huddle web`, las sesiones no escriben nada para la web.
 
 Con `HUDDLE_NO_ABRIR=1`, `/huddle web` solo te da la ruta, sin abrir el navegador.
+
+Así se ve, con los datos de ejemplo de los tests (son capturas de las pruebas con Playwright, en Edge):
+
+**Actividad**: dos sesiones atascadas, el cronograma de hoy, la bitácora y el uso por proyecto.
+
+![Pestaña Actividad: atascos, cronograma, bitácora y uso por proyecto](docs/capturas/web-actividad.png)
+
+**Bitácora**: el buscador encuentra, en los últimos 7 días, un fichero editado hace tres.
+
+![Bitácora con la búsqueda «billing» resaltada](docs/capturas/web-bitacora-busqueda.png)
+
+**Oficina isométrica**: una sala por proyecto; quien te espera sale al pasillo con «!», y las sesiones atascadas se ven con «↻» y el monitor en rojo.
+
+![Oficina en la escena isométrica](docs/capturas/web-oficina-isometrica.png)
+
+**Torre**, en tema oscuro: una planta por proyecto, la azotea para descansar, el sótano de archivo y el ascensor.
+
+![Oficina en la escena Torre, en tema oscuro](docs/capturas/web-oficina-torre-oscuro.png)
+
+**Oficina clásica** y el **detalle** de un subagente, que se abre al hacer clic en un personaje o en el árbol del Panel:
+
+![Oficina clásica con dos sesiones atascadas, en tema oscuro](docs/capturas/web-oficina-clasica-oscuro.png)
+
+![Detalle de un subagente sobre la escena isométrica, en tema oscuro](docs/capturas/web-detalle-oscuro.png)
 
 **Escenas de la Oficina.** En la web, la Oficina tiene tres escenas, que se eligen en su cabecera, junto a los modos sesiones y agentes:
 
