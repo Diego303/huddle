@@ -25,6 +25,8 @@ export type SistemaFalso = {
   responder: ((argv: string[], cwd: string | undefined) => { exitCode?: number; stdout?: string; stderr?: string } | undefined) | null
   /** Con qué cwd se lanzó cada proceso de `procesos`. */
   cwds: (string | undefined)[]
+  /** Los comandos que ha registrado el mod. */
+  comandos: string[]
 }
 
 /** Plantillas de prueba: cualquier lectura bajo .../templates/GENERAL/ se responde con esto. */
@@ -70,6 +72,7 @@ export function crearSistema(inicial: {
     pausa: null,
     responder: null,
     cwds: [],
+    comandos: [],
     sesion: { id: 'sesion-1', repo: null, uso: { startedAt: 0, context: { window: 1000000 }, rateLimits: [] }, agentes: [] },
   }
   for (const f of s.ficheros.keys()) anotarDirs(s, f)
@@ -162,7 +165,10 @@ export function instalarSistema(on: On, s: SistemaFalso): void {
     const pregunta = e.questions[0]?.question ?? ''
     return { result: { questions: e.questions, answers: { [pregunta]: s.respuestaAsk } } }
   })
-  on('command.register', (_, e) => ({ value: { command: e.name } }))
+  on('command.register', (_, e) => {
+    if (!s.comandos.includes(e.name)) s.comandos.push(e.name)
+    return { value: { command: e.name } }
+  })
   on('session.id', () => ({ value: s.sesion.id }))
   on('session.repo', () => ({
     value: s.sesion.repo === null ? null : { root: s.sesion.repo, remote: null, internal: false, name: null },

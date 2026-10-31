@@ -2,7 +2,7 @@
 // Cada hook de estado hace su trabajo en memoria y llama a `next(e)` enseguida;
 // si algo falla, su `.catch` deja seguir la cadena como si Huddle no estuviera.
 
-import type { Register } from 'claude-code'
+import type { EngineInterface, Register } from 'claude-code'
 
 import { configurar } from '../lib/comandos/configurar.ts'
 import { directorio } from '../lib/comandos/directorio.ts'
@@ -23,8 +23,9 @@ import {
   contarTurno,
   pedirUso,
   registrar,
+  situacion,
 } from '../lib/sesion.ts'
-import { abrirOficina, abrirPanel, iniciarTorre, PANEL, pintarPanel } from '../lib/torre.tsx'
+import { abrirOficina, abrirPanel, esTorre, iniciarTorre, PANEL, pintarPanel } from '../lib/torre.tsx'
 
 /** Un error de un comando se cuenta como su salida, sin romper la sesión. */
 function fallo(err: unknown): { text: string } {
@@ -41,62 +42,80 @@ function lanzamiento(r: unknown): { agenteLanzado?: string; agenteTerminado: boo
   return { agenteTerminado: true }
 }
 
+/**
+ * Los comandos solo existen donde sirven: todos en la carpeta de control y,
+ * mientras Huddle no esté configurado, solo /configurar. En el resto de
+ * sesiones Huddle no registra nada: solo anota su estado.
+ */
+async function registrarComandos($: EngineInterface): Promise<void> {
+  const torre = esTorre()
+  if (!torre && situacion() !== 'sin_config') return
+  await $.command.register({
+    name: 'configurar',
+    description: 'Huddle: convierte esta carpeta en la carpeta de control',
+    argumentHint: '[raíz de proyectos]',
+  })
+  if (!torre) return
+  await $.command.register({
+    name: 'directorio',
+    description: 'Huddle: cambia el directorio donde viven tus proyectos',
+    argumentHint: '<ruta>',
+  })
+  await $.command.register({
+    name: 'proyectos',
+    description: 'Huddle: busca carpetas nuevas en tu directorio de proyectos',
+  })
+  await $.command.register({
+    name: 'panel',
+    description: 'Huddle: abre el panel de sesiones, agentes y proyectos',
+  })
+  await $.command.register({
+    name: 'oficina',
+    description: 'Huddle: tus sesiones o agentes como empleados en sus mesas',
+    argumentHint: '[sesiones|agentes]',
+  })
+  await $.command.register({
+    name: 'refresh',
+    description: 'Huddle: actualiza git y ESTADO.md, y cuenta qué ha pasado desde la última vez',
+    argumentHint: '[solo-datos]',
+  })
+  await $.command.register({
+    name: 'proyecto',
+    description: 'Huddle: detalle de un proyecto (ficha, git, sesiones); con «tests», los ejecuta',
+    argumentHint: '<nombre> [tests]',
+  })
+  await $.command.register({
+    name: 'preguntar',
+    description: 'Huddle: pregunta a la sesión de un proyecto, en solo lectura',
+    argumentHint: '<proyecto> "<pregunta>"',
+  })
+  await $.command.register({
+    name: 'abrir',
+    description: 'Huddle: abre una pestaña con Claude Code en un proyecto',
+    argumentHint: '<proyecto>',
+  })
+  await $.command.register({
+    name: 'registro',
+    description: 'Huddle: apunta algo en el diario',
+    argumentHint: '"<texto>"',
+  })
+  await $.command.register({
+    name: 'cierre',
+    description: 'Huddle: resumen del día y próximos pasos',
+  })
+}
+
+/** Arranca Huddle en la sesión: su estado, sus comandos y, en la carpeta de control, el panel. */
+async function prepararSesion($: EngineInterface, interactiva: boolean): Promise<void> {
+  await arrancarSesion($, interactiva)
+  await registrarComandos($).catch(() => undefined)
+  await iniciarTorre($)
+}
+
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     const r = await next(e)
-    await $.command.register({
-      name: 'configurar',
-      description: 'Huddle: convierte esta carpeta en la carpeta de control',
-      argumentHint: '[raíz de proyectos]',
-    })
-    await $.command.register({
-      name: 'directorio',
-      description: 'Huddle: cambia el directorio donde viven tus proyectos',
-      argumentHint: '<ruta>',
-    })
-    await $.command.register({
-      name: 'proyectos',
-      description: 'Huddle: busca carpetas nuevas en tu directorio de proyectos',
-    })
-    await $.command.register({
-      name: 'panel',
-      description: 'Huddle: abre el panel de sesiones, agentes y proyectos',
-    })
-    await $.command.register({
-      name: 'refresh',
-      description: 'Huddle: actualiza git y ESTADO.md, y cuenta qué ha pasado desde la última vez',
-      argumentHint: '[solo-datos]',
-    })
-    await $.command.register({
-      name: 'proyecto',
-      description: 'Huddle: detalle de un proyecto (ficha, git, sesiones); con «tests», los ejecuta',
-      argumentHint: '<nombre> [tests]',
-    })
-    await $.command.register({
-      name: 'preguntar',
-      description: 'Huddle: pregunta a la sesión de un proyecto, en solo lectura',
-      argumentHint: '<proyecto> "<pregunta>"',
-    })
-    await $.command.register({
-      name: 'abrir',
-      description: 'Huddle: abre una pestaña con Claude Code en un proyecto',
-      argumentHint: '<proyecto>',
-    })
-    await $.command.register({
-      name: 'registro',
-      description: 'Huddle: apunta algo en el diario',
-      argumentHint: '"<texto>"',
-    })
-    await $.command.register({
-      name: 'cierre',
-      description: 'Huddle: resumen del día y próximos pasos',
-    })
-    await $.command.register({
-      name: 'oficina',
-      description: 'Huddle: tus sesiones o agentes como empleados en sus mesas',
-      argumentHint: '[sesiones|agentes]',
-    })
-    void arrancarSesion($, e.isInteractive).then(() => iniciarTorre($))
+    void prepararSesion($, e.isInteractive)
     return r
   }).catch(($, e, next) => next(e))
 
@@ -195,7 +214,10 @@ export const register: Register = on => {
 
   on('command.run', { command: 'configurar' }, async ($, e) => {
     try {
-      return { text: await configurar($, e.args ?? '') }
+      const texto = await configurar($, e.args ?? '')
+      // Recién configurado en esta carpeta: la sesión pasa a ser la torre (comandos y panel).
+      void prepararSesion($, true)
+      return { text: texto }
     } catch (err) {
       return fallo(err)
     }

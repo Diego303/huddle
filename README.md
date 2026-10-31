@@ -87,6 +87,19 @@ Listo. A partir de ahora, cada vez que abras Claude Code en esa carpeta verás e
 
 > **El panel sale solo** a partir de 144 columnas. En un terminal más estrecho, ábrelo con `/panel`. Con la pantalla completa de Claude Code se acopla a la derecha de la conversación (hasta el 45 % del ancho); sin ella, aparece encima del prompt, a todo el ancho.
 
+## Dónde se activa
+
+Huddle se instala a nivel de usuario porque necesita **estar en todas tus sesiones para verlas**: cada una anota su estado y el panel lo lee. Aun así, fuera de la carpeta de control es invisible. No dibuja nada ni añade ningún comando al autocompletado (solo `/configurar` mientras no esté configurado); solo escribe un JSON pequeño con su estado. Las sesiones `claude -p` y del SDK no cuentan.
+
+| Quieres… | Cómo |
+|---|---|
+| Que Huddle vea todas tus sesiones (lo normal) | `claude plugin install huddle --marketplace <tu-usuario>/huddle --scope user` |
+| Que una carpeta no aparezca nunca en el panel | Desde esa carpeta: `claude plugin disable huddle --scope local` (vuelve con `enable`) |
+| Que otro mod solo exista en su carpeta | Instálalo desde esa carpeta con `--scope local` (solo para ti) o `--scope project` (queda en el `.claude/settings.json` del repo) |
+| Probar Huddle en una sola sesión, sin instalarlo | `claude --plugin-dir /ruta/a/huddle` |
+
+Si instalas Huddle solo en la carpeta de control, el panel funcionará (`/refresh`, fichas, uso…), pero no verá las demás sesiones ni sus agentes.
+
 ## Uso diario
 
 ```

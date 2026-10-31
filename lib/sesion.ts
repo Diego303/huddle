@@ -26,7 +26,11 @@ const ESPERA_VOLCADO_MS = 100
 
 type Origen = { sessionId?: string; cwd?: string; transcript?: string; modelo?: string }
 
+/** `ignorada`: no interactiva (claude -p, SDK) o HUDDLE_IGNORAR; `sin_config`: falta /configurar. */
+export type Situacion = 'arrancando' | 'ignorada' | 'sin_config' | 'activa'
+
 type Contexto = {
+  situacion: Situacion
   /** Sesión interactiva, con Huddle configurado y la carpeta de control en su sitio. */
   activo: boolean
   /** session.start ya dijo si es interactiva. */
@@ -55,6 +59,7 @@ type Contexto = {
 }
 
 const ctx: Contexto = {
+  situacion: 'arrancando',
   activo: false,
   interactiva: null,
   cerrada: false,
@@ -87,6 +92,7 @@ function ahora(): string {
 export function reiniciarContexto(): void {
   ctx.temporizador?.cancel()
   Object.assign(ctx, {
+    situacion: 'arrancando',
     activo: false,
     interactiva: null,
     cerrada: false,
@@ -105,6 +111,10 @@ export function reiniciarContexto(): void {
     maxMs: 0,
     eventos: 0,
   })
+}
+
+export function situacion(): Situacion {
+  return ctx.situacion
 }
 
 export function estadoActual(): EstadoSesion | null {
@@ -195,11 +205,13 @@ export async function arrancarSesion($: EngineInterface, interactiva: boolean): 
     ctx.cerrada = false
     if (!interactiva || (await $.env.get('HUDDLE_IGNORAR'))) {
       ctx.activo = false
+      ctx.situacion = 'ignorada'
       return
     }
     const { config } = await leerConfig($)
     if (!estaConfigurada(config) || !(await esDirectorio($, config.general_dir))) {
       ctx.activo = false
+      ctx.situacion = 'sin_config'
       return
     }
     ctx.config = config
@@ -236,6 +248,7 @@ export async function arrancarSesion($: EngineInterface, interactiva: boolean): 
     const act = interpretarActividad((await leerTexto($, unir(ctx.dirActividad, `${id}.json`))) ?? '')
     ctx.actividad = act && act.session_id === id ? act : actividadVacia(id, c.proyecto)
     ctx.activo = true
+    ctx.situacion = 'activa'
     ctx.necesitaUso = true
     ctx.sucio = true
 
@@ -245,6 +258,7 @@ export async function arrancarSesion($: EngineInterface, interactiva: boolean): 
     programar($)
   } catch {
     ctx.activo = false
+    ctx.situacion = 'sin_config'
   }
 }
 
