@@ -19,7 +19,8 @@ import {
 import type { Linea } from './lienzo.ts'
 import { ajustar, barra, celda, COLOR, columnas, extremos, minibarra, s } from './lienzo.ts'
 import type { Celda } from './rex.ts'
-import { COLUMNAS as ANCHO_REX, fotograma } from './rex.ts'
+import type { Adorno } from './rex.ts'
+import { adornoDe, COLUMNAS as ANCHO_REX, fotograma } from './rex.ts'
 
 export type Bloque = { tipo: 'lineas'; lineas: Linea[] } | { tipo: 'rex'; celdas: Celda[][]; lado: Linea[]; ladoAncho: number }
 
@@ -120,7 +121,12 @@ function lineaContadores(vistas: SesionVista[], d: DatosPanel, w: number): Linea
   return [a, b]
 }
 
-function bloqueRex(vistas: SesionVista[], fichas: FichaPanel[], d: DatosPanel, n: number, ladoAncho: number): Bloque {
+export function adornoHoy(d: DatosPanel, ahora: number): Adorno {
+  const l = local(ahora, d.desfase)
+  return adornoDe(l.getUTCMonth() + 1, l.getUTCDate(), d.rex_estacional ?? true)
+}
+
+function bloqueRex(vistas: SesionVista[], fichas: FichaPanel[], d: DatosPanel, n: number, ladoAncho: number, ahora: number): Bloque {
   const estado = estadoRex(vistas, fichas)
   const lado: Linea[] = [
     titulo('Rex', [s(` · ${estado}`, { c: COLOR.gris })]),
@@ -129,7 +135,7 @@ function bloqueRex(vistas: SesionVista[], fichas: FichaPanel[], d: DatosPanel, n
     [],
     [s(`${textoRacha(racha(d.dias))} · nivel ${nivel(d.turnosTotales)}`, { c: COLOR.gris })],
   ]
-  return { tipo: 'rex', celdas: fotograma(estado, n), lado, ladoAncho }
+  return { tipo: 'rex', celdas: fotograma(estado, n, adornoHoy(d, ahora)), lado, ladoAncho }
 }
 
 function ejecutandose(vistas: SesionVista[], n: number, w: number, max: number): Linea[] {
@@ -303,7 +309,7 @@ export function componerPanel(d: DatosPanel | null, w: number, h: number, n: num
   const lineas = (l: Linea[]): Bloque => ({ tipo: 'lineas', lineas: l.map(x => ajustar(x, ancho)) })
   return [
     lineas([cabecera(d, ahora, ancho), ...lineaContadores(vistas, d, ancho)]),
-    bloqueRex(vistas, fichas, d, n, Math.max(10, ancho - ANCHO_REX - 2)),
+    bloqueRex(vistas, fichas, d, n, Math.max(10, ancho - ANCHO_REX - 2), ahora),
     lineas([...ejecutandose(vistas, n, ancho, maxSesiones), [], ...progreso(fichas, ancho), [], ...contexto(vistas, ancho), [], ...alertas(vistas, d, ahora), [], ...actividad(d), [], ...siguiente(vistas, d), regla(ancho), ...uso(d, ahora, ancho), pie(d, ancho)]),
   ]
 }
@@ -318,7 +324,7 @@ function panelAncho(d: DatosPanel, vistas: SesionVista[], fichas: FichaPanel[], 
     lineas([cabecera(d, ahora, w), regla(w)]),
     {
       tipo: 'rex',
-      celdas: fotograma(estadoRex(vistas, fichas), n),
+      celdas: fotograma(estadoRex(vistas, fichas), n, adornoHoy(d, ahora)),
       lado: [...lineaContadores(vistas, d, anchoTexto), [], ...ejecutandose(vistas, n, anchoTexto, arriba)].map(x => ajustar(x, anchoTexto)),
       ladoAncho: anchoTexto,
     },

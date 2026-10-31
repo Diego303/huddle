@@ -268,3 +268,9 @@ huddle/
 - **CI:** `/refresh` lo consulta solo si `gh` está instalado (`gh --version`) y el repo tiene upstream, con `gh run list --limit 1 --branch <rama> --json status,conclusion`, en paralelo y con 10 s de tope por repo. En esta máquina `gh` no está instalado, así que no hay dato ni alerta; lo cubren los tests.
 - **Siguiente acción por reglas (§2.5):** primero las sesiones que te esperan, luego las de contexto alto y después los commits sin push. Como mucho 3, y solo si `ESTADO.md` no tiene las suyas.
 - **Prueba real:** con un remoto local y un commit sin subir en `struo`, `/refresh` detectó «1 commit nuevo», y el panel mostró «▲ struo: 1 commit sin push», la regla «Push en struo» y la barra de commits del día.
+
+## 11. Decisiones de la Fase 7
+
+- **Capricho estacional:** `rex.estacional` (por defecto `true`). El 31 de octubre, una calabaza junto a las patas de Rex; en diciembre, un gorro rojo con borla, para lo que Rex baja media celda (la última fila del sprite está vacía). La fecha es la local.
+- **README:** instalación con `/plugin install huddle --marketplace <usuario>/huddle`, que es la línea que documenta el sistema de mods, y comandos sin prefijo. Las capturas son reales (de tmux, en pantalla completa a 200 × 50) y se muestran sin color, como bloques de texto.
+- **Pendiente para dar la fase por cerrada**, con tu permiso: la instalación limpia siguiendo solo el README (necesita el repo publicado, o instalarlo a nivel de usuario desde la carpeta local) y la carpeta de control real en `/mnt/d/GitHub/GENERAL`.

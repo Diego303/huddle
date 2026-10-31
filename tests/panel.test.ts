@@ -17,7 +17,7 @@ import {
 } from '../lib/panel-datos.ts'
 import { ancho, texto } from '../mod/lienzo.ts'
 import { componerPanel, duracion, fechaCabecera, reinicio } from '../mod/panel.ts'
-import { COLUMNAS, FILAS, fotograma, PALETA } from '../mod/rex.ts'
+import { adornoDe, COLUMNAS, FILAS, fotograma, PALETA } from '../mod/rex.ts'
 
 const AHORA = Date.parse('2026-10-31T00:46:00+01:00')
 
@@ -65,6 +65,7 @@ function datos(cambios: Partial<DatosPanel> = {}): DatosPanel {
     ultimoRefresh: null,
     git: {},
     usoEstimado: null,
+    rex_estacional: true,
     ...cambios,
   }
 }
@@ -215,5 +216,29 @@ describe('composición del panel', () => {
     expect(duracion(0.5)).toBe('ahora')
     expect(reinicio('2026-10-31T02:56:00.000Z', AHORA, 60)).toBe('reinicia en 3h 10m')
     expect(reinicio(null, AHORA, 60)).toBe('reinicio n/d')
+  })
+})
+
+describe('capricho estacional de Rex', () => {
+  test('calabaza el 31 de octubre, gorro en diciembre y nada si se apaga', () => {
+    expect(adornoDe(10, 31, true)).toBe('calabaza')
+    expect(adornoDe(12, 5, true)).toBe('gorro')
+    expect(adornoDe(10, 30, true)).toBeNull()
+    expect(adornoDe(10, 31, false)).toBeNull()
+    const calabaza = fotograma('durmiendo', 0, 'calabaza')
+    expect(calabaza[9]?.slice(20).map(c => c.fg)).toEqual([PALETA.calabaza, PALETA.calabaza, PALETA.calabaza, PALETA.calabaza])
+    const gorro = fotograma('trabajando', 0, 'gorro')
+    expect(gorro[0]?.slice(8, 16).every(c => c.fg === PALETA.rojo)).toBe(true)
+    expect(gorro[0]?.[16]).toMatchObject({ ch: '▗', fg: PALETA.blanco })
+    expect(gorro).toHaveLength(FILAS)
+  })
+
+  test('el panel lo pone según la fecha local y la config', () => {
+    const conRex = (rex_estacional: boolean, ahora: number) =>
+      componerPanel(datos({ rex_estacional }), 89, 48, 0, ahora).find(b => b.tipo === 'rex')
+    const halloween = conRex(true, AHORA)
+    expect(halloween?.tipo === 'rex' && halloween.celdas[9]?.[21]?.fg).toBe(PALETA.calabaza)
+    const apagado = conRex(false, AHORA)
+    expect(apagado?.tipo === 'rex' && apagado.celdas[9]?.[21]?.fg).not.toBe(PALETA.calabaza)
   })
 })

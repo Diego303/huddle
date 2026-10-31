@@ -15,6 +15,8 @@ export type Config = {
   /** Solo de respaldo, sin dato oficial de uso (sin suscripción). */
   limites: { sesion_5h_tokens: number | null; semana_tokens: number | null; reinicio_semanal: string }
   inactiva_min: number
+  /** El capricho estacional de Rex. */
+  rex: { estacional: boolean }
 }
 
 export const CONFIG_POR_DEFECTO: Config = {
@@ -24,6 +26,7 @@ export const CONFIG_POR_DEFECTO: Config = {
   notificaciones: { windows: true, repetir_min: 5 },
   limites: { sesion_5h_tokens: null, semana_tokens: null, reinicio_semanal: 'jue 09:00' },
   inactiva_min: 30,
+  rex: { estacional: true },
 }
 
 function objeto(v: unknown): Record<string, unknown> {
@@ -55,6 +58,7 @@ export function interpretarConfig(json: string): { config: Config; avisos: strin
   const d = CONFIG_POR_DEFECTO
   const n = objeto(bruto.notificaciones)
   const l = objeto(bruto.limites)
+  const r = objeto(bruto.rex)
   const config: Config = {
     general_dir: texto(bruto.general_dir, '') && normalizar(texto(bruto.general_dir, '')),
     raiz_proyectos: texto(bruto.raiz_proyectos, '') && normalizar(texto(bruto.raiz_proyectos, '')),
@@ -69,6 +73,7 @@ export function interpretarConfig(json: string): { config: Config; avisos: strin
       reinicio_semanal: texto(l.reinicio_semanal, d.limites.reinicio_semanal),
     },
     inactiva_min: numero(bruto.inactiva_min, d.inactiva_min, 1),
+    rex: { estacional: typeof r.estacional === 'boolean' ? r.estacional : d.rex.estacional },
   }
   return { config, avisos }
 }

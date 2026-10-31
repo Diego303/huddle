@@ -50,6 +50,7 @@ export type DatosPanel = {
   /** De /refresh; vacío si aún no se ha hecho ninguno. */
   git: Record<string, GitPanel>
   usoEstimado: UsoEstimado | null
+  rex_estacional: boolean
 }
 
 /** Suma los tokens de las horas desde `desde` (en ms) hasta ahora. */
@@ -215,6 +216,7 @@ export async function leerPanel($: EngineInterface, config: Config, desfase: num
     sinClasificar: doc?.sinClasificar.length ?? 0,
     ultimoRefresh: inst?.ms ?? null,
     usoEstimado,
+    rex_estacional: config.rex.estacional,
     git: Object.fromEntries(
       Object.entries(git?.repos ?? {}).map(([c, r]) => [c, { rama: r.rama, ahead: r.ahead, cambios: r.cambios, sucio_desde: r.sucio_desde, error: r.error, ci: r.ci ?? null }]),
     ),
