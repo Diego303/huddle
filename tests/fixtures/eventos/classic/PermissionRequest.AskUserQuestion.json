@@ -1,0 +1,36 @@
+{
+  "evento": "classic.PermissionRequest",
+  "capturado": "2026-10-31T00:26:26.595Z",
+  "datos": {
+    "session_id": "00000000-0000-4000-8000-000000000003",
+    "transcript_path": "/home/usuario/.claude/projects/-home-usuario-proyectos-proyecto-a/00000000-0000-4000-8000-000000000003.jsonl",
+    "cwd": "/home/usuario/proyectos/proyecto-a",
+    "scratchpad_dir": "/tmp/claude-1000/-home-usuario-proyectos-proyecto-a/00000000-0000-4000-8000-000000000003/scratchpad",
+    "prompt_id": "00000000-0000-4000-8000-000000000007",
+    "permission_mode": "auto",
+    "effort": {
+      "level": "medium"
+    },
+    "hook_event_name": "PermissionRequest",
+    "tool_name": "AskUserQuestion",
+    "tool_input": {
+      "questions": [
+        {
+          "question": "¿Red o blue?",
+          "header": "Color",
+          "options": [
+            {
+              "label": "Red",
+              "description": "Elegir rojo"
+            },
+            {
+              "label": "Blue",
+              "description": "Elegir azul"
+            }
+          ],
+          "multiSelect": false
+        }
+      ]
+    }
+  }
+}

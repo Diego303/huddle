@@ -1,0 +1,17 @@
+{
+  "evento": "classic.MessageDisplay",
+  "capturado": "2026-10-31T00:22:22.467Z",
+  "datos": {
+    "session_id": "00000000-0000-4000-8000-000000000003",
+    "transcript_path": "/home/usuario/.claude/projects/-home-usuario-proyectos-proyecto-a/00000000-0000-4000-8000-000000000003.jsonl",
+    "cwd": "/home/usuario/proyectos/proyecto-a",
+    "scratchpad_dir": "/tmp/claude-1000/-home-usuario-proyectos-proyecto-a/00000000-0000-4000-8000-000000000003/scratchpad",
+    "prompt_id": "00000000-0000-4000-8000-000000000004",
+    "hook_event_name": "MessageDisplay",
+    "turn_id": "00000000-0000-4000-8000-000000000009",
+    "message_id": "00000000-0000-4000-8000-000000000010",
+    "index": 0,
+    "final": true,
+    "delta": "<redactado:5>"
+  }
+}

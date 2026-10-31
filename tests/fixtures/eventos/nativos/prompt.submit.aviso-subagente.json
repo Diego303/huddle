@@ -1,0 +1,12 @@
+{
+  "evento": "prompt.submit",
+  "capturado": "2026-10-31T00:22:27.745Z",
+  "datos": {
+    "text": "<redactado:1219>",
+    "wait": false,
+    "origin": {
+      "kind": "peer"
+    },
+    "isMeta": true
+  }
+}

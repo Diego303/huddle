@@ -1,0 +1,57 @@
+{
+  "evento": "turn.complete",
+  "capturado": "2026-10-31T00:22:22.582Z",
+  "datos": {
+    "e": {
+      "answer": "<redactado:5>",
+      "durationMs": 5910,
+      "isAborted": false,
+      "turnId": "00000000-0000-4000-8000-000000000013",
+      "reason": "answer",
+      "usage": {
+        "input_tokens": 4,
+        "output_tokens": 391,
+        "cache_read_input_tokens": 54822,
+        "cache_creation_input_tokens": 14894,
+        "model": "claude-haiku-5-5"
+      }
+    },
+    "usage": {
+      "ms": 15,
+      "r": {
+        "startedAt": 1793406095708,
+        "context": {
+          "tokens": 35261,
+          "window": 1000000,
+          "percent": 4
+        },
+        "rateLimits": [
+          {
+            "kind": "five_hour",
+            "percentUsed": 12,
+            "resetsAt": "2026-10-31T04:30:00.000Z"
+          },
+          {
+            "kind": "seven_day",
+            "percentUsed": 32,
+            "resetsAt": "2026-11-06T06:00:00.000Z"
+          }
+        ],
+        "cost": {
+          "usd": 0.003959020000000001
+        }
+      }
+    },
+    "agentes": {
+      "ms": 2,
+      "r": [
+        {
+          "id": "a0000000000000001",
+          "description": "listar ficheros",
+          "type": "Explore",
+          "status": "running"
+        }
+      ]
+    }
+  }
+}

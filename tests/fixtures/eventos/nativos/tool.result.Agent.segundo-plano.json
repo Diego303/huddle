@@ -1,0 +1,35 @@
+{
+  "evento": "tool.result.Agent",
+  "capturado": "2026-10-31T00:22:21.065Z",
+  "datos": {
+    "tool_use_id": "toolu_fixture0003",
+    "ms": 1679,
+    "r": {
+      "ref": 1,
+      "result": {
+        "isAsync": "boolean",
+        "status": "<string:14>",
+        "agentId": "<string:17>",
+        "description": "<string:15>",
+        "resolvedModel": "<string:16>",
+        "prompt": "<string:212>",
+        "outputFile": "<string:187>",
+        "canReadOutputFile": "boolean",
+        "canContinueAgent": "boolean"
+      },
+      "text": "<redactado:1128>",
+      "isReadOnly": true
+    },
+    "agentes": {
+      "ms": 22,
+      "r": [
+        {
+          "id": "a0000000000000001",
+          "description": "listar ficheros",
+          "type": "Explore",
+          "status": "running"
+        }
+      ]
+    }
+  }
+}

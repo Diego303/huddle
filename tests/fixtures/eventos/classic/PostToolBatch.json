@@ -1,0 +1,43 @@
+{
+  "evento": "classic.PostToolBatch",
+  "capturado": "2026-10-31T00:22:21.157Z",
+  "datos": {
+    "session_id": "00000000-0000-4000-8000-000000000003",
+    "transcript_path": "/home/usuario/.claude/projects/-home-usuario-proyectos-proyecto-a/00000000-0000-4000-8000-000000000003.jsonl",
+    "cwd": "/home/usuario/proyectos/proyecto-a",
+    "scratchpad_dir": "/tmp/claude-1000/-home-usuario-proyectos-proyecto-a/00000000-0000-4000-8000-000000000003/scratchpad",
+    "prompt_id": "00000000-0000-4000-8000-000000000004",
+    "permission_mode": "auto",
+    "effort": {
+      "level": "medium"
+    },
+    "hook_event_name": "PostToolBatch",
+    "tool_calls": [
+      {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git status",
+          "description": "Show working tree status"
+        },
+        "tool_use_id": "toolu_fixture0001",
+        "tool_response": "<string:52>"
+      },
+      {
+        "tool_name": "Agent",
+        "tool_input": {
+          "description": "listar ficheros",
+          "subagent_type": "Explore",
+          "prompt": "<redactado:212>"
+        },
+        "tool_use_id": "toolu_fixture0003",
+        "tool_response": [
+          {
+            "type": "<string:4>",
+            "text": "<string:1128>"
+          },
+          "len=1"
+        ]
+      }
+    ]
+  }
+}

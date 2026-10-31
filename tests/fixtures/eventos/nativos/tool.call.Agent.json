@@ -1,0 +1,17 @@
+{
+  "evento": "tool.call.Agent",
+  "capturado": "2026-10-31T00:22:19.369Z",
+  "datos": {
+    "e": {
+      "description": "listar ficheros",
+      "subagent_type": "Explore",
+      "prompt": "<redactado:212>",
+      "tool": "Agent",
+      "tool_use_id": "toolu_fixture0003"
+    },
+    "agentes": {
+      "ms": 5,
+      "r": []
+    }
+  }
+}

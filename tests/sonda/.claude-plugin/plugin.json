@@ -1,0 +1,1 @@
+{ "name": "huddle-sonda", "version": "0.0.1", "description": "Sonda temporal de la Fase 0 de Huddle: guarda payloads de eventos", "types": "./types/index.d.ts" }

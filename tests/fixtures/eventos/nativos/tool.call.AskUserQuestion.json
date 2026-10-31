@@ -1,0 +1,27 @@
+{
+  "evento": "tool.call.AskUserQuestion",
+  "capturado": "2026-10-31T00:26:26.563Z",
+  "datos": {
+    "e": {
+      "questions": [
+        {
+          "question": "¿Red o blue?",
+          "header": "Color",
+          "multiSelect": false,
+          "options": [
+            {
+              "label": "Red",
+              "description": "Elegir rojo"
+            },
+            {
+              "label": "Blue",
+              "description": "Elegir azul"
+            }
+          ]
+        }
+      ],
+      "tool": "AskUserQuestion",
+      "tool_use_id": "toolu_fixture0004"
+    }
+  }
+}

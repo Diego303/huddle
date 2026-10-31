@@ -1,0 +1,23 @@
+{
+  "evento": "ui.render.pane",
+  "capturado": "2026-10-31T00:27:43.264Z",
+  "datos": {
+    "surface": "terminal",
+    "props": {
+      "title": "Sonda",
+      "isFocused": false,
+      "bodyColumns": 196,
+      "placement": "inline",
+      "scroll": {
+        "offset": 0,
+        "bodyRows": 14
+      },
+      "view": {}
+    },
+    "viewport": {
+      "columns": 200,
+      "rows": 50,
+      "isFullscreen": false
+    }
+  }
+}
