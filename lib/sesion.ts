@@ -12,7 +12,7 @@ import { actividadVacia, DIAS_GUARDADOS, HORAS_TOKENS, interpretarActividad, pod
 import type { Config } from './config.ts'
 import { estaConfigurada, leerConfig } from './config.ts'
 import type { EstadoSesion, Evento } from './estado.ts'
-import { aplicar, estadoInicial } from './estado.ts'
+import { aplicar, estadoInicial, usoDe } from './estado.ts'
 import { borrar, escribirAtomico, esDirectorio, leerTexto } from './ficheros.ts'
 import type { Plataforma } from './notificar.ts'
 import { avisar, plataformaDe } from './notificar.ts'
@@ -20,6 +20,12 @@ import { interpretarProyectos } from './proyectos.ts'
 import { normalizar, padre, unir } from './rutas.ts'
 import { clasificar, gitdirDeFichero, ramaDeHead } from './sesion-proyecto.ts'
 import { desfaseDeTexto, diaLocal, horaLocal, isoLocal, ultimosDias } from './tiempo.ts'
+import { escribirDatosWeb, webActiva } from './web.ts'
+
+/** Como mucho una escritura de datos.js cada tanto por sesión (la web relee cada 2 s). */
+const INTERVALO_WEB_MS = 700
+/** Cada cuánto vuelve a mirar una sesión si se activó la web (/huddle web). */
+const REVISAR_WEB_MS = 30_000
 
 /** Cuánto se espera para agrupar escrituras. */
 const ESPERA_VOLCADO_MS = 100
@@ -56,6 +62,10 @@ type Contexto = {
   diagnostico: boolean
   maxMs: number
   eventos: number
+  web: boolean | null
+  webRevisada: number
+  webUltima: number
+  webTemporizador: { cancel: () => void } | null
 }
 
 const ctx: Contexto = {
@@ -82,6 +92,10 @@ const ctx: Contexto = {
   diagnostico: false,
   maxMs: 0,
   eventos: 0,
+  web: null,
+  webRevisada: 0,
+  webUltima: 0,
+  webTemporizador: null,
 }
 
 function ahora(): string {
@@ -110,6 +124,10 @@ export function reiniciarContexto(): void {
     cola: [],
     maxMs: 0,
     eventos: 0,
+    web: null,
+    webRevisada: 0,
+    webUltima: 0,
+    webTemporizador: null,
   })
 }
 
@@ -131,6 +149,52 @@ export function desfaseActual(): number {
 
 export function ahoraLocal(): string {
   return ahora()
+}
+
+export function plataformaActual(): Plataforma {
+  return ctx.plataforma
+}
+
+/** Reescribe datos.js de la web ahora mismo (si está activa). */
+export async function escribirWeb($: EngineInterface): Promise<void> {
+  if (ctx.config === null) return
+  ctx.webUltima = Date.now()
+  try {
+    // El uso, en vivo (como la torre): si cada escritor usara uno distinto, datos.js bailaría entre versiones.
+    const motor = await $.session.usage().catch(() => null)
+    const uso = (motor ? usoDe(motor, ahora()) : null) ?? ctx.estado?.uso ?? null
+    await escribirDatosWeb($, ctx.config, ctx.desfase, uso, ahora().slice(11, 19))
+  } catch {
+    // la web se queda con los datos anteriores
+  }
+}
+
+/**
+ * Tras volcar el estado: si la web está activa, reescribe datos.js, como mucho
+ * una vez cada INTERVALO_WEB_MS (con una escritura final si llegan más eventos).
+ */
+async function quizaWeb($: EngineInterface): Promise<void> {
+  if (ctx.config === null) return
+  const t = Date.now()
+  if (ctx.web !== true && t - ctx.webRevisada > REVISAR_WEB_MS) {
+    ctx.webRevisada = t
+    ctx.web = await webActiva($, ctx.config)
+  }
+  if (!ctx.web) return
+  const espera = INTERVALO_WEB_MS - (t - ctx.webUltima)
+  if (espera <= 0) {
+    await escribirWeb($)
+    return
+  }
+  if (ctx.webTemporizador !== null) return
+  try {
+    ctx.webTemporizador = $.clock.after(espera, () => {
+      ctx.webTemporizador = null
+      void escribirWeb($)
+    })
+  } catch {
+    ctx.webTemporizador = null
+  }
 }
 
 export function rutaEstado(id: string): string {
@@ -372,6 +436,7 @@ export async function volcar($: EngineInterface): Promise<void> {
     await escribirAtomico($, rutaEstado(id), `${JSON.stringify(salida, null, 2)}\n`)
     // Si la sesión se cerró (o cambió de id con /clear) mientras se escribía, no se deja el fichero.
     if (ctx.cerrada || ctx.estado?.session_id !== id) await borrar($, rutaEstado(id))
+    else await quizaWeb($)
     if (ctx.actividadSucia && ctx.actividad) {
       ctx.actividadSucia = false
       await escribirAtomico($, unir(ctx.dirActividad, `${ctx.actividad.session_id}.json`), `${JSON.stringify(ctx.actividad)}\n`)
@@ -405,6 +470,8 @@ export async function cerrarSesion($: EngineInterface, motivo: string): Promise<
     // se pierde, como mucho, el último turno
   }
   await borrar($, rutaEstado(estado.session_id))
+  // Que la web deje de mostrarla (sin esperar: la salida tiene un tope de tiempo corto).
+  if (ctx.web) void escribirWeb($)
 }
 
 /** `classic.CwdChanged`: la sesión puede haber cambiado de proyecto. */

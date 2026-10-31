@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>huddle</title>
+<!--
+  Huddle · vista web. Un único fichero autocontenido: sin CDN ni peticiones de red.
+  Cada 2 s vuelve a cargar datos.js (window.HUDDLE = {...}), que escriben las sesiones
+  de Claude Code. Esta página no calcula nada: solo pinta lo que trae datos.js.
+-->
+<style>
+:root{--surface-0:#f5f4ef;--surface-1:#faf9f5;--surface-2:#ffffff;--text-primary:#1f1e1d;--text-secondary:#5f5e5a;--text-muted:#888780;--border:rgba(0,0,0,.12);--border-strong:rgba(0,0,0,.2);--border-stronger:rgba(0,0,0,.4);--bg-success:#EAF3DE;--text-success:#3B6D11;--bg-warning:#FAEEDA;--text-warning:#854F0B;--text-danger:#A32D2D;--font-sans:system-ui,-apple-system,"Segoe UI",sans-serif;--font-mono:"Cascadia Mono","JetBrains Mono",ui-monospace,Consolas,monospace;--radius:8px}
+@media (prefers-color-scheme:dark){:root{--surface-0:#1a1a19;--surface-1:#232322;--surface-2:#2b2b29;--text-primary:#f1efe8;--text-secondary:#b4b2a9;--text-muted:#888780;--border:rgba(255,255,255,.12);--border-strong:rgba(255,255,255,.2);--border-stronger:rgba(255,255,255,.4);--bg-success:#27500A;--text-success:#C0DD97;--bg-warning:#633806;--text-warning:#FAC775;--text-danger:#F09595}}
+html{background:var(--surface-0)}
+body{margin:0 auto;padding:24px;background:var(--surface-0);color:var(--text-primary);font-family:var(--font-sans);max-width:1000px}
+button{font:inherit;font-size:12px;color:var(--text-primary);background:transparent;border:.5px solid var(--border-strong);border-radius:var(--radius);padding:4px 10px;cursor:pointer}
+button:hover{background:var(--surface-1)}
+.t{font-family:var(--font-mono);font-size:12px;line-height:1.5}
+.marco{background:var(--surface-1);border-radius:12px;padding:12px;border:.5px solid var(--border)}
+.box{background:var(--surface-2);border:.5px solid var(--border);border-radius:8px;padding:10px 12px;min-width:0}
+.mut{color:var(--text-secondary)}
+.lab{color:var(--text-secondary);font-size:11px;margin-bottom:6px}
+.bar{height:8px;border-radius:4px;background:var(--surface-1);overflow:hidden;border:.5px solid var(--border)}
+.bar>i{display:block;height:100%;transition:width .4s}
+.k{font-size:22px;font-weight:500;line-height:1.1}
+.sp{display:inline-block;animation:sp 1s steps(4) infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+@keyframes shake{25%{transform:translateX(-2px)}75%{transform:translateX(2px)}}
+@keyframes sway{50%{transform:translateX(1.5px)}}
+@keyframes salto{50%{transform:translateY(-4px)}}
+@keyframes zz{0%{transform:translate(0,0);opacity:0}30%{opacity:1}100%{transform:translate(1px,-3px);opacity:0}}
+@keyframes typ{50%{transform:translateY(-0.6px)}}
+@keyframes blink{50%{opacity:.3}}
+.ty{animation:typ .25s steps(2) infinite}
+.bl{animation:blink 1s steps(2) infinite}
+.cab{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px}
+.cab>.mut{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tabs{flex:none}
+.tabs button{border:0;padding:2px 10px;border-radius:6px;font-size:12px;color:var(--text-secondary)}
+.tabs button.on{background:#D85A30;color:#fff}
+.g-sup{display:grid;grid-template-columns:minmax(0,1fr) 170px;gap:8px}
+.g-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.g-dos{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:8px;margin-top:8px}
+.mt{margin-top:8px}
+.rex{display:flex;flex-direction:column;align-items:center;justify-content:space-between}
+.fila{display:flex;justify-content:space-between;gap:8px}
+.fila>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.arbol .s{padding:3px 0;border-top:.5px solid var(--border)}
+.arbol .s:first-child{border-top:0}
+.arbol .a{padding:3px 0 3px 16px}
+.vacio{color:var(--text-muted);font-size:11px}
+.act{display:flex;align-items:flex-end;gap:8px;height:80px}
+.act>div{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px}
+.act .barras{display:flex;gap:2px;align-items:flex-end;height:58px}
+.act .barras i{display:block;width:8px;border-radius:2px 2px 0 0}
+.act .hoy{color:#D85A30;font-weight:500}
+.md{display:flex;gap:6px}
+.md button.on{background:var(--surface-1);border-color:var(--border-stronger)}
+.salas{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.room{background:var(--surface-2);border:.5px solid var(--border);border-radius:8px;padding:8px 10px;min-width:0}
+.room.ancha{grid-column:span 2}
+.desks{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.desk{display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px;border-radius:6px;max-width:180px;text-align:center}
+.desk:hover{background:var(--surface-1)}
+.pie{display:flex;justify-content:space-between;margin-top:10px;font-size:11px}
+.vivo{color:#1D9E75}
+.parado{color:#BA7517}
+[hidden]{display:none!important}
+@media (max-width:640px){.g-sup,.g-dos,.salas{grid-template-columns:minmax(0,1fr)}.g-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.room.ancha{grid-column:auto}}
+</style>
+</head>
+<body>
+<div class="t marco">
+  <div class="cab">
+    <span class="tabs" role="tablist"><button id="tab-panel" class="on" role="tab">Panel</button> <button id="tab-oficina" role="tab">Oficina</button></span>
+    <span class="mut" id="cabecera">huddle</span>
+  </div>
+
+  <section id="v-panel">
+    <div class="g-sup">
+      <div>
+        <div class="g-kpis">
+          <div class="box"><div class="lab">Sesiones vivas</div><div class="k" style="color:var(--text-success)"><span id="k-vivas">—</span><span class="mut" style="font-size:13px" id="k-total"></span></div></div>
+          <div class="box"><div class="lab">Te esperan</div><div class="k" id="k-esperan">—</div></div>
+          <div class="box"><div class="lab">Agentes</div><div class="k"><span id="k-agentes">—</span> <span class="mut" style="font-size:12px" id="k-sub"></span></div></div>
+          <div class="box"><div class="lab">Tareas hoy</div><div class="k" id="k-tareas">—</div><div class="bar" style="margin-top:6px" id="k-tareas-barra"><i style="width:0;background:#1D9E75"></i></div><div class="vacio" id="k-tareas-pie" style="margin-top:3px"></div></div>
+        </div>
+        <div class="box mt"><div class="lab">Ejecutándose ahora</div><div class="arbol" id="arbol"></div></div>
+      </div>
+      <div class="box rex">
+        <div class="lab" style="align-self:flex-start">Rex</div>
+        <svg id="rex" width="84" height="84" viewBox="-1 -2 12 12" style="image-rendering:pixelated;overflow:visible" role="img"><title id="rex-titulo">Rex</title></svg>
+        <div style="text-align:center;font-size:11px;margin-top:6px" id="rex-bocadillo"></div>
+        <div class="mut" style="font-size:11px;margin-top:8px;text-align:center"><span id="rex-racha"></span><br><span id="rex-nivel"></span> · <span style="color:#D85A30" id="rex-barra"></span><span id="rex-resto"></span></div>
+      </div>
+    </div>
+
+    <div class="g-dos">
+      <div class="box"><div class="fila"><span class="lab">Progreso por proyecto</span><span class="lab" id="proyectos-titulo"></span></div><div id="proyectos"></div></div>
+      <div class="box"><div class="lab">Contexto por sesión</div><div id="contexto"></div>
+        <div class="lab" style="margin-top:10px">Alertas</div><div style="font-size:11px;line-height:1.7" id="alertas"></div></div>
+    </div>
+
+    <div class="g-dos">
+      <div class="box">
+        <div class="fila"><span class="lab">Actividad 7 días</span><span class="mut" style="font-size:11px"><span style="color:#7F77DD">■</span> commits <span style="color:#5DCAA5">■</span> turnos</span></div>
+        <div class="act" id="actividad"></div>
+        <div class="vacio" id="actividad-nota"></div>
+      </div>
+      <div class="box"><div class="fila"><span class="lab">Siguiente acción sugerida</span><span class="lab" id="siguiente-titulo"></span></div><div style="font-size:12px;line-height:1.6" id="siguiente"></div></div>
+    </div>
+
+    <div class="box mt"><div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px" id="uso"></div></div>
+  </section>
+
+  <section id="v-oficina" hidden>
+    <div class="cab"><div class="md" id="modos"><button id="modo-sesiones" class="on">Modo sesiones</button><button id="modo-agentes">Modo agentes</button></div><div class="mut" id="resumen"></div></div>
+    <div class="salas" id="salas"></div>
+    <div class="mut" style="margin-top:10px;font-size:11px"><span style="color:#1D9E75">●</span> trabajando <span style="color:#BA7517">●</span> espera aprobación <span style="color:#B4B2A9">●</span> en pausa <span style="color:#888780">●</span> inactivo · rol: <span style="color:#D85A30">■</span> lead <span style="color:#7F77DD">■</span> explore <span style="color:#378ADD">■</span> plan <span style="color:#1D9E75">■</span> tests</div>
+  </section>
+
+  <div class="pie mut"><span id="vivo"><span class="parado">●</span> esperando datos.js…</span><span id="pie"></span></div>
+</div>
+
+<script>
+(() => {
+  'use strict'
+  const $ = id => document.getElementById(id)
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c])
+  const COLOR = { w: '#1D9E75', a: '#BA7517', p: '#B4B2A9', i: '#888780' }
+  const depurar = /depurar/.test(location.search)
+
+  // --- vista activa: pestaña y modo, que sobreviven a cada repintado (y a recargar, por el hash)
+  let vista = 'panel'
+  let modo = 'sesiones'
+  const h = location.hash.slice(1).split('-')
+  if (h[0] === 'oficina') vista = 'oficina'
+  if (h[1] === 'agentes') modo = 'agentes'
+
+  function mostrar() {
+    $('v-panel').hidden = vista !== 'panel'
+    $('v-oficina').hidden = vista !== 'oficina'
+    $('tab-panel').classList.toggle('on', vista === 'panel')
+    $('tab-oficina').classList.toggle('on', vista === 'oficina')
+    $('modo-sesiones').classList.toggle('on', modo === 'sesiones')
+    $('modo-agentes').classList.toggle('on', modo === 'agentes')
+    history.replaceState(null, '', '#' + vista + (vista === 'oficina' ? '-' + modo : ''))
+  }
+  $('tab-panel').onclick = () => { vista = 'panel'; mostrar() }
+  $('tab-oficina').onclick = () => { vista = 'oficina'; mostrar() }
+  $('modo-sesiones').onclick = () => { modo = 'sesiones'; mostrar(); if (H) bloques.oficina(H) }
+  $('modo-agentes').onclick = () => { modo = 'agentes'; mostrar(); if (H) bloques.oficina(H) }
+
+  const barra = (pct, color, alto) => `<div class="bar"${alto ? ` style="height:${alto}px"` : ''}><i style="width:${pct === null ? 0 : pct}%;background:${color}"></i></div>`
+  const icono = e => e === 'w' ? '<span class="sp">◐</span>' : e === 'a' ? '<span style="color:var(--text-warning)">⏸</span>' : e === 'i' ? '<span class="mut">z</span>' : '<span class="mut">·</span>'
+
+  // --- Rex en SVG (el sprite de 10×10 de la maqueta)
+  const SPRITE = ['....####..', '....#o####', '....######', '....####..', '#..######.', '########..', '.######...', '..#..#....', '..#..#....', '..........']
+  function rex(r) {
+    let p = ''
+    SPRITE.forEach((fila, y) => [...fila].forEach((ch, x) => {
+      if (ch === '.') return
+      const ojo = ch === 'o' && r.estado !== 'durmiendo'
+      p += `<rect x="${x}" y="${y}" width="1.02" height="1.02" fill="${ojo ? '#4A1B0C' : y >= 7 ? '#F0997B' : '#D85A30'}"/>`
+    }))
+    if (r.estado === 'durmiendo') p += '<rect x="5" y="1.45" width="1" height="0.3" fill="#4A1B0C"/>'
+    if (r.adorno === 'gorro') p += '<rect x="4" y="-1" width="4" height="1" fill="#E24B4A"/><rect x="8" y="-1.3" width="0.8" height="0.8" fill="#F1EFE8"/>'
+    if (r.adorno === 'calabaza') p += '<rect x="8.2" y="8" width="2.4" height="1.8" rx="0.4" fill="#E8822A"/><rect x="9.2" y="7.4" width="0.4" height="0.7" fill="#3B6D11"/>'
+    const anima = { alerta: 'shake .3s linear infinite', trabajando: 'sway 1.2s steps(2) infinite', celebrando: 'salto .6s steps(2) infinite', durmiendo: 'none' }[r.estado]
+    let extra = ''
+    if (r.estado === 'alerta') extra += '<text x="9.5" y="-0.3" font-size="3" fill="#E24B4A" font-family="monospace">!</text>'
+    if (r.estado === 'durmiendo') extra += '<text x="8.5" y="1" font-size="2.2" fill="#F0997B" font-family="monospace" style="animation:zz 2.4s linear infinite">z</text>'
+    if (r.estado === 'celebrando') extra += '<text x="9.4" y="0" font-size="2" fill="#EFB427">✦</text><text x="-0.8" y="3" font-size="1.6" fill="#EFB427">✦</text>'
+    return `<g style="animation:${anima}">${p}${extra}</g>`
+  }
+
+  // --- un empleado de la oficina (la función worker() de la maqueta, más «en pausa»)
+  function worker(color, s) {
+    let p = '<rect x="1" y="5" width="1" height="7" fill="#888780"/>'
+    if (s === 'i') p += `<rect x="3" y="4" width="3" height="3" fill="#F0997B"/><rect x="2" y="6" width="5" height="3" fill="${color}"/><rect x="6" y="7" width="3" height="1" fill="${color}"/><text x="4" y="2.5" font-size="3" fill="#888780" font-family="monospace">z</text>`
+    else if (s === 'a') p += `<rect x="3" y="2" width="3" height="3" fill="#F0997B"/><rect x="2" y="5" width="5" height="3" fill="${color}"/><rect x="6" y="0" width="1" height="5" fill="${color}"/><text x="7.5" y="3" font-size="3.5" fill="#BA7517" font-family="monospace" class="bl">!</text>`
+    else if (s === 'p') p += `<rect x="3" y="2" width="3" height="3" fill="#F0997B"/><rect x="2" y="5" width="5" height="3" fill="${color}"/><rect x="7" y="7" width="2" height="1" fill="${color}"/>`
+    else p += `<rect x="3" y="2" width="3" height="3" fill="#F0997B"/><rect x="2" y="5" width="5" height="3" fill="${color}"/><g class="ty"><rect x="7" y="6" width="2" height="1" fill="${color}"/></g>`
+    const scr = s === 'w' ? `<rect x="10" y="4" width="4" height="0.6" fill="${color}"/><rect x="10" y="5.2" width="2.5" height="0.6" fill="${color}" class="bl"/>`
+      : s === 'a' ? '<rect x="11.5" y="4.3" width="1" height="1.5" fill="#BA7517" class="bl"/>'
+      : s === 'p' ? '<rect x="10" y="4" width="4" height="0.6" fill="#5F5E5A"/>' : ''
+    return `<svg width="64" height="56" viewBox="0 0 16 14" style="image-rendering:pixelated" aria-hidden="true"><rect x="9" y="3" width="6" height="4" fill="#2C2C2A"/>${scr}<rect x="11.5" y="7" width="1" height="1" fill="#5F5E5A"/><rect x="0" y="8" width="16" height="1" fill="#B4B2A9"/><rect x="1" y="9" width="1" height="5" fill="#B4B2A9"/><rect x="14" y="9" width="1" height="5" fill="#B4B2A9"/>${p}</svg>`
+  }
+
+  // --- cada bloque se pinta por separado; solo se repintan los que cambian
+  const bloques = {
+    cabecera: H => { $('cabecera').textContent = H.cabecera },
+    kpis: H => {
+      const k = H.kpis
+      $('k-vivas').textContent = k.vivas
+      $('k-total').textContent = ' ' + k.total
+      $('k-esperan').textContent = k.teEsperan
+      $('k-esperan').style.color = k.teEsperan !== '0' ? 'var(--text-warning)' : 'var(--text-secondary)'
+      $('k-agentes').textContent = k.agentes
+      $('k-sub').textContent = k.sub
+      $('k-tareas').textContent = k.tareas
+      $('k-tareas-barra').firstElementChild.style.width = (k.tareasPct ?? 0) + '%'
+      $('k-tareas-pie').textContent = k.tareasPie
+    },
+    arbol: H => {
+      $('arbol').innerHTML = H.arbol.length === 0
+        ? '<div class="vacio">ninguna sesión abierta</div>'
+        : H.arbol.map(r => `<div class="fila ${r.sub ? 'a' : 's'}"><span>${r.sub ? '<span class="mut">└ </span>' : `<span style="color:${r.color}">●</span> `}<span${r.sub ? ` style="color:${r.color}"` : ''}>${esc(r.nombre)}</span> <span class="mut" style="font-size:11px">${esc(r.tipo)}</span></span><span class="mut" style="font-size:11px">${esc(r.detalle)} ${icono(r.estado)}</span></div>`).join('')
+    },
+    rex: H => {
+      const r = H.rex
+      $('rex').innerHTML = `<title>Rex · ${esc(r.estado)}</title>` + rex(r)
+      $('rex-bocadillo').textContent = r.bocadillo
+      $('rex-bocadillo').style.color = r.estado === 'alerta' ? 'var(--text-warning)' : ''
+      $('rex-racha').textContent = r.racha
+      $('rex-nivel').textContent = r.nivel
+      $('rex-barra').textContent = r.barra
+      $('rex-resto').textContent = r.resto
+    },
+    proyectos: H => {
+      const p = H.proyectos
+      $('proyectos-titulo').textContent = p.titulo
+      $('proyectos').innerHTML = p.vacio
+        ? [0, 1, 2].map(() => `<div style="margin-bottom:9px"><div class="fila"><span class="vacio">·</span><span class="vacio">0%</span></div><div style="margin-top:3px">${barra(0, '#888780')}</div></div>`).join('') + `<div style="color:var(--text-warning);font-size:11px">${esc(p.vacio)}</div>`
+        : p.filas.map(f => `<div style="margin-bottom:9px"><div class="fila"><span>${esc(f.nombre)} <span class="mut" style="font-size:11px">${esc(f.detalle)}</span></span><span style="font-weight:500">${esc(f.texto)}</span></div><div style="margin-top:3px">${barra(f.pct, f.color)}</div></div>`).join('')
+    },
+    contexto: H => {
+      $('contexto').innerHTML = H.contexto.length === 0
+        ? '<div class="vacio">sin sesiones vivas</div>'
+        : H.contexto.map(c => `<div style="margin-bottom:7px"><div class="fila" style="font-size:11px"><span>${esc(c.nombre)}</span><span style="color:${c.color}">${esc(c.texto)}</span></div><div style="margin-top:2px">${barra(c.pct, c.color)}</div></div>`).join('')
+    },
+    alertas: H => {
+      $('alertas').innerHTML = H.alertas.length === 0
+        ? '<span class="vacio">ninguna</span>'
+        : H.alertas.map(a => `<span style="color:var(${a.grave ? '--text-danger' : '--text-warning'})">▲</span> ${esc(a.texto)}`).join('<br>')
+    },
+    actividad: H => {
+      $('actividad').innerHTML = H.actividad.dias.map(d => `<div title="${esc(d.titulo)}"><div class="barras">${d.vacio
+        ? '<i style="height:2px;background:var(--border-strong)"></i><i style="height:2px;background:var(--border-strong)"></i>'
+        : `<i style="height:${Math.round(d.altoC * 0.58)}px;background:#7F77DD"></i><i style="height:${Math.round(d.altoT * 0.58)}px;background:#5DCAA5"></i>`}</div><span class="mut${d.hoy ? ' hoy' : ''}" style="font-size:11px">${esc(d.letra)}</span></div>`).join('')
+      $('actividad-nota').textContent = H.actividad.nota
+    },
+    siguiente: H => {
+      $('siguiente-titulo').textContent = H.siguiente.titulo
+      $('siguiente').innerHTML = H.siguiente.acciones.length === 0
+        ? '<span class="vacio">nada pendiente · /refresh para que Claude proponga</span>'
+        : H.siguiente.acciones.map((a, i) => `${i + 1}. ${esc(a)}`).join('<br>')
+    },
+    uso: H => {
+      $('uso').innerHTML = H.uso.map(u => `<div><div class="fila" style="font-size:11px"><span class="mut">${esc(u.titulo)}</span><span><span style="font-weight:500">${esc(u.texto)}</span> <span class="mut">· ${esc(u.pie)}</span></span></div><div style="margin-top:4px">${barra(u.pct, u.color, 10)}</div></div>`).join('')
+    },
+    oficina: H => {
+      const salas = H.oficina[modo]
+      const r = H.oficina.resumen[modo]
+      $('resumen').innerHTML = `${esc(r.total)} · <span style="color:#1D9E75">${esc(r.trabajando)}</span> · <span style="color:#BA7517">${esc(r.esperan)}</span> · ${esc(r.inactivas)}`
+      $('salas').innerHTML = salas.length === 0
+        ? '<div class="vacio">La oficina está vacía: no hay ninguna sesión abierta.</div>'
+        : salas.map(s => `<div class="room${s.empleados.length > 2 ? ' ancha' : ''}"><div class="fila"><span style="font-weight:500">${esc(s.nombre)}</span><span class="mut" style="font-size:11px">${esc(s.contador)}</span></div><div class="desks">${s.empleados.map(e => `<div class="desk" title="${esc(e.etiqueta)} · ${esc(e.actividad)}">${worker(e.color, e.estado)}<div style="font-size:11px"><span style="color:${COLOR[e.estado]}">●</span> ${esc(e.etiqueta)}</div><div class="mut" style="font-size:11px">${esc(e.actividad)}</div></div>`).join('')}</div></div>`).join('')
+    },
+    pie: H => { $('pie').textContent = H.pie },
+  }
+
+  let H = null
+  let version = null
+  const previos = {}
+
+  function pintar(datos) {
+    const cambiados = []
+    for (const [clave, fn] of Object.entries(bloques)) {
+      const json = JSON.stringify(datos[clave])
+      if (previos[clave] === json) continue
+      previos[clave] = json
+      fn(datos)
+      cambiados.push(clave)
+    }
+    if (depurar) console.log('huddle-web ' + JSON.stringify({ t: Date.now(), version: datos.version, cambiados, arbol: datos.arbol.map(r => r.nombre + '|' + r.detalle) }))
+  }
+
+  function vivo(ok) {
+    $('vivo').innerHTML = ok
+      ? `<span class="vivo">●</span> en vivo · datos de ${esc(H ? H.generado : '')}`
+      : '<span class="parado">●</span> sin datos.js: ¿está configurado Huddle y abierta alguna sesión?'
+  }
+
+  // --- en vivo: cada 2 s se vuelve a insertar <script src="datos.js?t=…"> (funciona con file://)
+  function cargar() {
+    const s = document.createElement('script')
+    s.src = 'datos.js?t=' + Date.now()
+    s.onload = () => {
+      s.remove()
+      const nuevo = window.HUDDLE
+      if (!nuevo) return vivo(false)
+      H = nuevo
+      if (nuevo.version !== version) {
+        version = nuevo.version
+        pintar(nuevo)
+      }
+      vivo(true)
+    }
+    s.onerror = () => { s.remove(); vivo(false) }
+    document.head.appendChild(s)
+  }
+
+  mostrar()
+  cargar()
+  setInterval(cargar, 2000)
+})()
+</script>
+</body>
+</html>

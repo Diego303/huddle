@@ -8,7 +8,7 @@
   "packageManager": "pnpm@12.6.0",
   "scripts": {
     "test": "claude plugin test .",
-    "lint": "tsc -p . && claude plugin validate ."
+    "lint": "node scripts/comprobar-web.mjs && tsc -p . && claude plugin validate ."
   },
   "devDependencies": {
     "typescript": "^5.9.3"

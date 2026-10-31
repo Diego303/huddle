@@ -12,6 +12,9 @@ import type { ModoOficina } from '../types/index.d.ts'
 import { usoDe } from './estado.ts'
 import type { DatosPanel } from './lector.ts'
 import { leerPanel } from './lector.ts'
+import { escribirAtomico } from './ficheros.ts'
+import { unir } from './rutas.ts'
+import { dirWeb, lineaDatos, modeloWeb, webActiva } from './web.ts'
 import { ahoraLocal, configActual, desfaseActual, estadoActual } from './sesion.ts'
 
 export const PANEL = 'huddle'
@@ -26,6 +29,9 @@ export const fotogramaAtom = atom({ plugin: 'huddle', key: 'fotograma' } as cons
 let activa = false
 let ultimo = ''
 let leyendo = false
+let webEscrita = 0
+/** La torre reescribe datos.js también sin cambios cada tanto, para las horas relativas y las inactivas. */
+const REFRESCO_WEB_MS = 30_000
 
 export function esTorre(): boolean {
   return estadoActual()?.tipo === 'torre' && configActual() !== null
@@ -41,6 +47,13 @@ export async function refrescarPanel($: EngineInterface): Promise<void> {
     const propio = motor ? usoDe(motor, ahoraLocal()) : null
     const datos = await leerPanel($, config, desfaseActual(), propio)
     const firma = JSON.stringify({ ...datos, generado: 0, uso: datos.uso ? { ...datos.uso, leido: '' } : null })
+    const ahora = Date.now()
+    if (firma !== ultimo || ahora - webEscrita > REFRESCO_WEB_MS) {
+      webEscrita = ahora
+      if (await webActiva($, config)) {
+        await escribirAtomico($, unir(dirWeb(config), 'datos.js'), lineaDatos(modeloWeb(datos, ahora, ahoraLocal().slice(11, 19))))
+      }
+    }
     if (firma === ultimo) return
     ultimo = firma
     const json = JSON.stringify(datos)

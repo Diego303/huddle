@@ -11,6 +11,7 @@ import { cierre } from '../lib/comandos/cierre.ts'
 import { preguntar } from '../lib/comandos/preguntar.ts'
 import { proyecto } from '../lib/comandos/proyecto.ts'
 import { proyectos } from '../lib/comandos/proyectos.ts'
+import { huddle } from '../lib/comandos/web.ts'
 import { refresh } from '../lib/comandos/refresh.ts'
 import { registro } from '../lib/comandos/registro.ts'
 import { esHerramientaDeAgente } from '../lib/detalle.ts'
@@ -98,6 +99,11 @@ async function registrarComandos($: EngineInterface): Promise<void> {
     name: 'registro',
     description: 'Huddle: apunta algo en el diario',
     argumentHint: '"<texto>"',
+  })
+  await $.command.register({
+    name: 'huddle',
+    description: 'Huddle: «/huddle web» abre la vista web en vivo en el navegador',
+    argumentHint: 'web',
   })
   await $.command.register({
     name: 'cierre',
@@ -268,6 +274,13 @@ export const register: Register = on => {
   on('command.run', { command: 'registro' }, async ($, e) => {
     try {
       return { text: await registro($, e.args ?? '') }
+    } catch (err) {
+      return fallo(err)
+    }
+  })
+  on('command.run', { command: 'huddle' }, async ($, e) => {
+    try {
+      return { text: await huddle($, e.args ?? '') }
     } catch (err) {
       return fallo(err)
     }

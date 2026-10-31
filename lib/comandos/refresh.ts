@@ -18,6 +18,7 @@ import type { Ficha } from '../panel-datos.ts'
 import { accionesPorReglas, interpretarFicha, porcentaje, vistaSesiones } from '../panel-datos.ts'
 import { interpretarProyectos } from '../proyectos.ts'
 import { encolarPrompt } from '../encolar.ts'
+import { escribirDatosWeb, webActiva } from '../web.ts'
 import { unir } from '../rutas.ts'
 import { desfaseActual } from '../sesion.ts'
 import { horaLocal, isoLocal, ultimosDias } from '../tiempo.ts'
@@ -151,6 +152,7 @@ export async function hacerRefresh($: EngineInterface, config: Config, redactar:
   }
   await escribirAtomico($, rutaInst, `${JSON.stringify(instantanea)}\n`)
 
+  if (await webActiva($, config)) await escribirDatosWeb($, config, desfase, null, fecha.slice(11, 19)).catch(() => undefined)
   const ms = Date.now() - t0
   if (redactar) encolarPrompt($, PROMPT_REDACTAR(rutaEstado))
 

@@ -299,3 +299,21 @@ Se acercó el panel a la maqueta con lo que permite el terminal. Lo que hay y c�
 **Color:** el motor baja solo a 256 o 16 colores según el terminal. En tmux sin `COLORTERM` bajó a 16, y ahí `#21211f` y `#30302d` se convierten en negro, así que el fondo de las tarjetas no se distingue. En Windows Terminal, que tiene truecolor, se ven los colores exactos; con `COLORTERM=truecolor`, tmux los guarda en 256 (fondo 235, píldora 173).
 
 **Rendimiento:** el panel se redibuja cada 600 ms. Los tramos contiguos con el mismo estilo se juntan en un solo `Text` (`compactar`).
+
+## 13. Vista web en vivo (`/huddle web`)
+
+- **Qué hace:** `/huddle web`, desde la carpeta de control, copia `web/dashboard.html` del mod a `.agentos/web/dashboard.html`, escribe `.agentos/web/datos.js` y abre la página. En WSL usa `wslview` si está instalado y, si no, `explorer.exe` con la ruta de `wslpath -w`; en Linux, `xdg-open`; en macOS, `open`. Con `HUDDLE_NO_ABRIR=1` solo dice la ruta.
+- **La página no calcula:** `lib/web.ts` (`modeloWeb`) prepara todo lo que se pinta: IDs, estados, colores, textos («reinicia en 2h 10m»), alturas de las barras de actividad (0–100), el texto de la barra de nivel y las dos variantes de la oficina. `datos.js` es una sola línea, `window.HUDDLE = {...}`, con una `version` (FNV-1a del contenido, sin la hora de generación) para que la página no repinte si no ha cambiado nada.
+- **Quién escribe `datos.js`, siempre de forma atómica:**
+  - **Las sesiones,** tras volcar su estado, como mucho una vez cada 0,7 s y con una escritura final si siguen llegando eventos. Se hace en el temporizador del volcado, nunca dentro de un hook, así que los hooks siguen en ≤ 3 ms. También al cerrarse, para que la web deje de mostrarlas.
+  - **La torre,** cuando cambia algo y, aunque no cambie nada, cada 30 s, para que las horas relativas y las sesiones que pasan a inactivas no se queden viejas.
+  - **`/refresh`,** al terminar.
+
+  Solo se escribe si existe `.agentos/web/dashboard.html`: quien no use la web no paga nada. Las sesiones vuelven a comprobarlo cada 30 s.
+- **Uso en vivo para todos los escritores:** en la prueba real, `datos.js` cambiaba de versión cada 2 s sin que cambiara nada. La torre leía el uso en vivo y las demás sesiones usaban el último guardado, así que cada escritor dejaba un uso distinto. Ahora todos lo leen en vivo con `$.session.usage()`.
+- **En vivo sin recargar:** cada 2 s la página inserta `<script src="datos.js?t=…">`, que funciona con `file://`. Repinta solo los bloques cuyo JSON ha cambiado. La pestaña y el modo de la oficina viven en variables (y en el `#hash`, así que sobreviven a recargar), y el scroll no se toca porque solo se reemplaza el interior de los bloques.
+- **Autocontenido:** `scripts/comprobar-web.mjs`, dentro de `pnpm lint`, falla si `web/dashboard.html` tiene URLs http(s), `<link>`, `@import`, `fetch`, APIs de red o cualquier `src` que no sea `datos.js`. Pesa unos 21 KB.
+- **Diseño:** el de `docs/maquetas/panel.html` y `oficina.html`: sus variables de color en claro y oscuro (según el sistema), sus tarjetas, el árbol de agentes, el Rex en SVG (que ahora además duerme, se balancea, salta y se disfraza) y la función `worker()` de la oficina, más una variante «en pausa». Se comprobó con capturas de Edge sin ventana, en claro y en oscuro, junto a las de las maquetas.
+- **Prueba en vivo (≤ 3 s):** página abierta en Edge sin ventana con `?depurar`, que escribe en la consola lo que repinta, y una sesión real lanzando un subagente. **Cuidado al medir:** el reloj de WSL2 iba unos 7 s por detrás del de Windows, así que las primeras medidas parecían de 7–8 s. Comparando los dos relojes con el desfase corregido, el subagente aparece en la página entre 0 y 0,4 s después de estar en el fichero de estado; `datos.js` lo incluye unos 0,1–0,5 s después. La comprobación se hizo en `/mnt/d` (borrado después).
+- **Sin probar en real:** que `/huddle web` abra tu navegador. No lo abrí para no dejarte ventanas; el comando que lanza está cubierto por tests.
+- **Las maquetas** (`docs/maquetas/`) entraron sin querer en el commit `ab80f0a`, por un `git add -A`.

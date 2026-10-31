@@ -145,6 +145,7 @@ cd /mnt/d/GitHub/GENERAL && claude
 |---|---|
 | `/refresh` | Actualiza git y `ESTADO.md` y te cuenta qué ha pasado desde la última vez. Después Claude redacta el resumen y la siguiente acción (`/refresh solo-datos` lo omite) |
 | `/panel` · `/oficina [sesiones\|agentes]` | Cambia entre el panel y la oficina |
+| `/huddle web` | Abre la vista web en el navegador; se actualiza sola, sin recargar |
 | `/proyecto <nombre> [tests]` | Detalle de un proyecto: ficha, git y sesiones. Con `tests`, Claude ejecuta sus tests sin cambiar nada |
 | `/preguntar <proyecto> "<pregunta>"` | Pregunta a la sesión de un proyecto, en solo lectura |
 | `/abrir <proyecto>` | Abre una pestaña nueva de terminal con Claude Code en ese proyecto |
@@ -160,6 +161,14 @@ Los comandos no llevan prefijo (`/refresh`, no `/huddle:refresh`). Sus respuesta
 
 **Qué significa cada estado**: `trabajando` (verde), `te espera` (ámbar: un permiso o una pregunta), `en pausa` (el turno terminó), `inactiva` (sin actividad desde hace más de `inactiva_min` minutos).
 
+## Vista web
+
+`/huddle web` (en la carpeta de control) crea `.agentos/web/dashboard.html` y lo abre en el navegador: en WSL, en el de Windows, con `explorer.exe`, o con `wslview` si lo tienes; en Linux, con `xdg-open`; en macOS, con `open`. Es un único fichero autocontenido, sin CDN ni peticiones de red, con el Panel y la Oficina como pestañas y el tema claro u oscuro del sistema.
+
+Se actualiza sola: cada 2 s vuelve a leer `.agentos/web/datos.js` (una línea `window.HUDDLE = {...}`, que escriben tus sesiones en cada evento y `/refresh`) y repinta solo lo que cambió, sin perder la pestaña ni el scroll. Mientras no ejecutes `/huddle web`, las sesiones no escriben nada para la web.
+
+Con `HUDDLE_NO_ABRIR=1`, `/huddle web` solo te da la ruta, sin abrir el navegador.
+
 ## La carpeta de control
 
 ```
@@ -169,6 +178,7 @@ GENERAL/
 ├─ proyectos/         una ficha por proyecto: tareas, bloqueos y próximos pasos
 ├─ registro/          diario mensual
 └─ .agentos/          estado interno (no lo edites; está en .gitignore)
+   └─ web/            la vista web (dashboard.html y datos.js), si usas /huddle web
 ```
 
 **`PROYECTOS.md`:**

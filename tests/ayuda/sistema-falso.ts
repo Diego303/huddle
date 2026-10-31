@@ -5,6 +5,8 @@ import type { On } from 'claude-code'
 
 export type SistemaFalso = {
   ficheros: Map<string, string>
+  /** Fecha de modificación de cada fichero (sube con cada escritura). */
+  mtimes: Map<string, number>
   dirs: Set<string>
   /** Cada ruta que el mod ha leído o abierto (fs.read, fs.exists, fs.stat, head). */
   tocadas: string[]
@@ -46,7 +48,11 @@ function anotarDirs(s: SistemaFalso, ruta: string): void {
   for (let d = padre(ruta); d !== '/' && !s.dirs.has(d); d = padre(d)) s.dirs.add(d)
 }
 
+/** La plantilla de la web, cuando se lee del mod. */
+export const DASHBOARD = '<!DOCTYPE html><title>huddle</title>'
+
 function plantilla(ruta: string): string | undefined {
+  if (ruta.endsWith('/web/dashboard.html') && !ruta.includes('/.agentos/')) return DASHBOARD
   const i = ruta.indexOf('/templates/GENERAL/')
   return i < 0 ? undefined : PLANTILLAS[ruta.slice(i + '/templates/GENERAL/'.length)]
 }
@@ -60,6 +66,7 @@ export function crearSistema(inicial: {
 }): SistemaFalso {
   const s: SistemaFalso = {
     ficheros: new Map(Object.entries(inicial.ficheros ?? {})),
+    mtimes: new Map(),
     dirs: new Set(),
     tocadas: [],
     procesos: [],
@@ -84,6 +91,8 @@ export function crearSistema(inicial: {
   return s
 }
 
+let reloj = 1
+
 export function instalarSistema(on: On, s: SistemaFalso): void {
   on('fs.read', (_, e) => {
     s.tocadas.push(e.path)
@@ -94,6 +103,7 @@ export function instalarSistema(on: On, s: SistemaFalso): void {
     if (s.pausa) await s.pausa
     if (s.discoRoto) return { deny: 'EIO: disco roto' }
     s.ficheros.set(e.path, e.text)
+    s.mtimes.set(e.path, ++reloj)
     anotarDirs(s, e.path)
     return { value: undefined }
   })
@@ -105,7 +115,7 @@ export function instalarSistema(on: On, s: SistemaFalso): void {
     s.tocadas.push(e.path)
     if (s.dirs.has(e.path)) return { value: { kind: 'dir', size: 0, mtimeMs: 0, isLink: false } }
     const f = s.ficheros.get(e.path)
-    if (f !== undefined) return { value: { kind: 'file', size: f.length, mtimeMs: 0, isLink: false } }
+    if (f !== undefined) return { value: { kind: 'file', size: f.length, mtimeMs: s.mtimes.get(e.path) ?? 0, isLink: false } }
     return { deny: `ENOENT: ${e.path}` }
   })
   on('fs.list', (_, e) => {
@@ -114,7 +124,7 @@ export function instalarSistema(on: On, s: SistemaFalso): void {
     for (const d of s.dirs) if (padre(d) === base) nombres.set(d.slice(base.length + 1), 'dir')
     for (const f of s.ficheros.keys()) if (padre(f) === base) nombres.set(f.slice(base.length + 1), 'file')
     return {
-      value: [...nombres].map(([name, kind]) => ({ name, kind, size: 0, mtimeMs: 0, isLink: false })),
+      value: [...nombres].map(([name, kind]) => ({ name, kind, size: 0, mtimeMs: s.mtimes.get(`${base}/${name}`) ?? 0, isLink: false })),
     }
   })
   on('process.run', (_, e) => {
@@ -140,6 +150,7 @@ export function instalarSistema(on: On, s: SistemaFalso): void {
       if (de === undefined || a === undefined || texto === undefined) return { value: { ...ok.value, exitCode: 1 } }
       s.ficheros.delete(de)
       s.ficheros.set(a, texto)
+      s.mtimes.set(a, ++reloj)
       return ok
     }
     if (argv[0] === 'rm') {
