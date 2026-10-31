@@ -41,7 +41,22 @@ cd /mnt/d/GitHub/GENERAL && claude
 - `/oficina` y `/panel` cambian de vista.
 - Al acabar el día: `/cierre`.
 
-## 4. Dónde está activo Huddle
+## 4. Vista web en el navegador
+
+Además del panel en el terminal, puedes ver lo mismo en el navegador, y se actualiza solo.
+
+1. En Claude Code, dentro de la carpeta de control:
+   ```
+   /huddle web
+   ```
+2. Se abre `.agentos/web/dashboard.html` en tu navegador (en WSL, en el de Windows), con el Panel y la Oficina como pestañas.
+3. Déjala abierta: cada 2 s lee los datos nuevos y se actualiza sin recargar. Si lanzas un subagente en otra sesión, aparece en un par de segundos.
+
+- Para volver a abrirla otro día, vuelve a hacer `/huddle web`, o guarda la página en favoritos.
+- Para que solo te diga la ruta, sin abrir el navegador: `HUDDLE_NO_ABRIR=1`.
+- Si no usas nunca `/huddle web`, tus sesiones no escriben nada para la web.
+
+## 5. Dónde está activo Huddle
 
 Huddle se instala para todas tus sesiones, porque así ve qué hace cada una. Fuera de la carpeta de control no se nota: no dibuja nada ni añade comandos.
 
@@ -64,7 +79,7 @@ claude plugin marketplace remove huddle
 claude plugin install huddle --marketplace <usuario>/huddle --scope user
 ```
 
-## 5. Desinstalar
+## 6. Desinstalar
 
 ```bash
 claude plugin uninstall huddle
