@@ -32,11 +32,12 @@ describe('el modelo de la web (datos.js)', () => {
   test('Rex, proyectos, contexto por umbral y alertas', () => {
     expect(m.rex).toMatchObject({ estado: 'alerta', bocadillo: '"¡feat-export te espera!"', racha: 'racha 6 días', nivel: 'nivel 13', adorno: 'calabaza' })
     expect((m.rex.barra + m.rex.resto).length).toBe(8)
-    expect(m.proyectos.titulo).toBe('3 de 37')
+    expect(m.proyectos.titulo).toBe('3 proyectos en seguimiento')
+    expect(m.proyectos.nota).toBe('')
     expect(m.proyectos.filas.map(f => [f.nombre, f.detalle, f.texto])).toEqual([
       ['struo', 'ola 3 · 5/7', '71%'],
       ['proyecto-b', 'migración · 9/10', '90%'],
-      ['proyecto-c', 'MVP', '—'],
+      ['proyecto-c', 'MVP · sin tareas', '—'],
     ])
     expect(m.contexto.map(c => [c.nombre, c.texto, c.color])).toEqual([
       ['struo/feat-export', '83%', '#E24B4A'],
@@ -70,9 +71,17 @@ describe('el modelo de la web (datos.js)', () => {
   })
 
   test('sin datos, n/d y estados vacíos; nunca números inventados', () => {
-    const v = modeloWeb(datos({ sesiones: [], fichas: [], enSeguimiento: 0, uso: null, hoy: null, siguiente: [], dias: [], git: {} }), AHORA, 'x')
+    const v = modeloWeb(datos({ sesiones: [], fichas: [], seguimiento: [], enSeguimiento: 0, uso: null, hoy: null, siguiente: [], dias: [], git: {} }), AHORA, 'x')
     expect(v.kpis.tareas).toBe('—')
-    expect(v.proyectos.vacio).toBe('0 de 37 en seguimiento · /proyectos')
+    expect(v.proyectos.titulo).toBe('ningún proyecto en seguimiento')
+    expect(v.proyectos.nota).toBe('edita PROYECTOS.md y luego /proyectos')
+    const sinFichas = modeloWeb(datos({ fichas: [], seguimiento: ['avizor', 'rimor'], enSeguimiento: 2 }), AHORA, 'x')
+    expect(sinFichas.proyectos.titulo).toBe('2 proyectos en seguimiento')
+    expect(sinFichas.proyectos.filas.map(f => [f.nombre, f.detalle, f.pct, f.texto])).toEqual([
+      ['avizor', 'sin ficha', null, '—'],
+      ['rimor', 'sin ficha', null, '—'],
+    ])
+    expect(sinFichas.proyectos.nota).toBe('2 sin ficha · /proyectos las crea')
     expect(v.uso.map(u => [u.pct, u.texto])).toEqual([
       [null, 'n/d'],
       [null, 'n/d'],

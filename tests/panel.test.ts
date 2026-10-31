@@ -180,7 +180,7 @@ describe('composición del panel', () => {
     expect(i('╭─ Actividad')).toBeLessThan(i('╭─ Sesión 5 h'))
     expect(l.length).toBeLessThanOrEqual(44)
     const todo = t.join('\n')
-    for (const k of ['1 trab · 1 pausa', 'feat-export · 8m', '+1 sub', '5/7', '“¡feat-export te', 'racha 6 días · nivel 13', 'STR-explore-01', '3 de 37', '83%', '▲ feat-export: contexto 83 %, compactar', '1. Aprobar GATE#1 en struo/feat-export', 'reinicia en 3h 10m', 'reinicia jue 09:00', '1 sin clasificar']) {
+    for (const k of ['1 trab · 1 pausa', 'feat-export · 8m', '+1 sub', '5/7', '“¡feat-export te', 'racha 6 días · nivel 13', 'STR-explore-01', '3 proyectos en seguimiento', '83%', '▲ feat-export: contexto 83 %, compactar', '1. Aprobar GATE#1 en struo/feat-export', 'reinicia en 3h 10m', 'reinicia jue 09:00', '1 sin clasificar']) {
       expect(todo).toContain(k)
     }
   })
@@ -223,12 +223,13 @@ describe('composición del panel', () => {
     expect(t.some(x => /L +M +X +J +V +S +D/.test(x))).toBe(true)
   })
 
-  test('7 · estados vacíos: forma a cero, «0 de 37 en seguimiento · /proyectos» y eje apagado', () => {
-    const vacio = datos({ fichas: [], enSeguimiento: 0, sesiones: [], dias: [], hoy: null, siguiente: [], uso: null, git: {} })
+  test('7 · sin proyectos en seguimiento: lo dice, sin barras inventadas; eje apagado', () => {
+    const vacio = datos({ fichas: [], seguimiento: [], enSeguimiento: 0, sesiones: [], dias: [], hoy: null, siguiente: [], uso: null, git: {} })
     const t = componerPanel(vacio, 88, 44, 0, AHORA).map(texto)
     const todo = t.join('\n')
-    expect(todo).toContain('0 de 37 en seguimiento · /proyectos')
-    expect(t.filter(x => x.includes('0%')).length).toBeGreaterThanOrEqual(3)
+    expect(todo).toContain('ningún proyecto en seguimiento')
+    expect(todo).toContain('edita PROYECTOS.md y luego /proyectos')
+    expect(todo).not.toContain('de 37')
     expect(t.some(x => /▁▁ +▁▁ +▁▁ +▁▁ +▁▁ +▁▁ +▁▁/.test(x))).toBe(true)
     expect(todo).toContain('commits n/d')
     expect(todo).toContain('n/d · configúralo en config.json')
@@ -248,6 +249,24 @@ describe('composición del panel', () => {
     expect(colorDe(48)).toBe('#378ADD')
     expect(colorDe(70)).toBe('#EF9F27')
     expect(colorDe(85)).toBe('#E24B4A')
+  })
+
+  test('proyectos en seguimiento sin ficha: con su nombre y «—», nunca un 0 % inventado', () => {
+    const d = datos({ fichas: [], seguimiento: ['avizor', 'rimor', 'struo'], enSeguimiento: 3 })
+    const t = componerPanel(d, 88, 44, 0, AHORA).map(texto)
+    const filas = t.filter(x => /avizor|rimor|struo  /.test(x) && x.includes('sin ficha'))
+    expect(filas).toHaveLength(3)
+    for (const f of filas) expect(f).toMatch(/—/)
+    expect(t.join('\n')).toContain('3 proyectos en seguimiento')
+    expect(t.join('\n')).toContain('3 sin ficha · /proyectos las crea')
+    expect(t.filter(x => /\b0%/.test(x) && x.includes('sin ficha'))).toEqual([])
+    // Con fichas para unos y no para otros, en el orden de PROYECTOS.md.
+    const mixto = datos({ seguimiento: ['proyecto-b', 'nuevo', 'struo'], enSeguimiento: 3 })
+    const m = componerPanel(mixto, 88, 44, 0, AHORA).map(texto)
+    const i = (k: string) => m.findIndex(x => x.includes(k))
+    expect(i('proyecto-b')).toBeLessThan(i('nuevo'))
+    expect(i('nuevo')).toBeLessThan(i('struo  '))
+    expect(m.join('\n')).toContain('1 sin ficha · /proyectos las crea')
   })
 
   test('sin «Siguiente acción» en ESTADO.md, sale por reglas', () => {

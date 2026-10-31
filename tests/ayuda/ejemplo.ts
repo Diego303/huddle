@@ -53,8 +53,8 @@ export function datos(cambios: Partial<DatosPanel> = {}): DatosPanel {
     git: { 'proyecto-b': { rama: 'main', ahead: 3, cambios: 0, sucio_desde: null, error: null, ci: null } },
     usoEstimado: null,
     rex_estacional: true,
+    seguimiento: ['struo', 'proyecto-b', 'proyecto-c'],
     enSeguimiento: 3,
-    carpetasTotal: 37,
     ...cambios,
   }
 }

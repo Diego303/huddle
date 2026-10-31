@@ -221,9 +221,8 @@ button:hover{background:var(--surface-1)}
     proyectos: H => {
       const p = H.proyectos
       $('proyectos-titulo').textContent = p.titulo
-      $('proyectos').innerHTML = p.vacio
-        ? [0, 1, 2].map(() => `<div style="margin-bottom:9px"><div class="fila"><span class="vacio">·</span><span class="vacio">0%</span></div><div style="margin-top:3px">${barra(0, '#888780')}</div></div>`).join('') + `<div style="color:var(--text-warning);font-size:11px">${esc(p.vacio)}</div>`
-        : p.filas.map(f => `<div style="margin-bottom:9px"><div class="fila"><span>${esc(f.nombre)} <span class="mut" style="font-size:11px">${esc(f.detalle)}</span></span><span style="font-weight:500">${esc(f.texto)}</span></div><div style="margin-top:3px">${barra(f.pct, f.color)}</div></div>`).join('')
+      $('proyectos').innerHTML = p.filas.map(f => `<div style="margin-bottom:9px"><div class="fila"><span${f.pct === null ? ' class="mut"' : ''}>${esc(f.nombre)} <span class="mut" style="font-size:11px">${esc(f.detalle)}</span></span><span style="font-weight:500"${f.pct === null ? ' class="mut"' : ''}>${esc(f.texto)}</span></div><div style="margin-top:3px">${barra(f.pct, f.color)}</div></div>`).join('')
+        + (p.nota ? `<div style="color:var(--text-warning);font-size:11px">${esc(p.nota)}</div>` : '')
     },
     contexto: H => {
       $('contexto').innerHTML = H.contexto.length === 0

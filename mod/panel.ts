@@ -295,36 +295,46 @@ function tarjetaEjecucion(c: Ctx, w: number, alto: number): Linea[] {
   })
 }
 
+/** Los proyectos en seguimiento, en el orden de PROYECTOS.md, con su ficha si la tienen. */
+export function proyectosEnSeguimiento(d: DatosPanel, fichas: readonly FichaPanel[]): { nombre: string; ficha: FichaPanel | null }[] {
+  const nombres = d.seguimiento ?? fichas.map(f => f.carpeta)
+  return nombres.map(n => ({ nombre: n, ficha: fichas.find(f => f.carpeta.toLowerCase() === n.toLowerCase()) ?? null }))
+}
+
+/** «8 proyectos en seguimiento» y, si faltan fichas, «3 sin ficha · /proyectos» (sin contar el resto de carpetas). */
+export function resumenSeguimiento(n: number, sinFicha: number): string[] {
+  if (n === 0) return ['ningún proyecto en seguimiento', 'edita PROYECTOS.md y luego /proyectos']
+  const base = `${n} ${n === 1 ? 'proyecto' : 'proyectos'} en seguimiento`
+  return sinFicha > 0 ? [base, `${sinFicha} sin ficha · /proyectos las crea`] : [base]
+}
+
 function tarjetaProgreso(c: Ctx, w: number, alto?: number): Linea[] {
   const dentro = interior(w, c.aire)
+  const lista = proyectosEnSeguimiento(c.d, c.fichas)
   const lineas: Linea[] = []
-  const wNombre = Math.min(14, Math.max(6, ...c.fichas.map(f => f.carpeta.length)))
-  const wFase = Math.max(0, Math.min(16, dentro - wNombre - 18))
+  const wNombre = Math.min(20, Math.max(6, ...lista.map(p => p.nombre.length)))
+  const wFase = Math.max(0, Math.min(16, dentro - wNombre - 1 - 13))
   const wBarra = Math.max(4, dentro - wNombre - 1 - (wFase > 0 ? wFase + 1 : 0) - 5)
-  const filaProyecto = (nombre: Linea, fase: string, pct: number | null, completo: boolean, apagada = false): Linea => [
-    ...ajustar(nombre, wNombre + 1),
-    ...(wFase > 0 ? col(fase, wFase + 1, gris) : []),
-    ...barraSuave(pct, wBarra, completo ? COLOR.verde : COLOR.verdeOscuro),
-    s(apagada ? '   0%' : pct === null ? '    —' : `${String(pct).padStart(4)}%`, pct === null || apagada ? gris : {}),
-  ]
-  for (const f of c.fichas) {
-    const fase = [f.fase, f.tareas.total > 0 ? `${f.tareas.hechas}/${f.tareas.total}` : ''].filter(Boolean).join(' · ') || '—'
-    lineas.push(filaProyecto([s(f.carpeta)], fase, f.pct, f.pct === 100))
+  for (const { nombre, ficha } of lista) {
+    const nombreCol = col(nombre, wNombre + 1, ficha ? {} : gris)
+    if (ficha === null) {
+      // Sin ficha no hay progreso que enseñar: ni barra ni porcentaje inventado.
+      lineas.push([...nombreCol, ...col('sin ficha', dentro - wNombre - 1 - 5, gris), s('    —', gris)])
+      continue
+    }
+    const fase = [ficha.fase, ficha.tareas.total > 0 ? `${ficha.tareas.hechas}/${ficha.tareas.total}` : 'sin tareas'].filter(Boolean).join(' · ')
+    lineas.push([
+      ...nombreCol,
+      ...(wFase > 0 ? col(fase, wFase + 1, gris) : []),
+      ...barraSuave(ficha.pct, wBarra, ficha.pct === 100 ? COLOR.verde : COLOR.verdeOscuro),
+      s(ficha.pct === null ? '    —' : `${String(ficha.pct).padStart(4)}%`, ficha.pct === null ? gris : {}),
+    ])
   }
-  if (c.fichas.length === 0) {
-    // Estado vacío con intención: la forma de la tarjeta, a cero, y qué hacer.
-    for (let i = 0; i < 3; i++) lineas.push(filaProyecto([s('·', gris)], '', 0, false, true))
-    lineas.push([s(`${c.d.enSeguimiento} de ${c.d.carpetasTotal} en seguimiento`, { c: COLOR.ambar }), s(' · /proyectos', gris)])
-  } else if (c.d.enSeguimiento > c.fichas.length) {
-    lineas.push([s(`${c.d.enSeguimiento - c.fichas.length} sin ficha · /proyectos`, gris)])
-  }
-  return tarjeta(lineas, {
-    titulo: 'Progreso por proyecto',
-    derecha: [s(`${c.d.enSeguimiento} de ${c.d.carpetasTotal}`, gris)],
-    ancho: w,
-    aire: c.aire,
-    ...(alto ? { alto } : {}),
-  })
+  const sinFicha = lista.filter(p => p.ficha === null).length
+  const [base, aviso] = resumenSeguimiento(lista.length, sinFicha)
+  lineas.push([s(base ?? '', gris)])
+  if (aviso) lineas.push([s(aviso, { c: COLOR.ambar })])
+  return tarjeta(lineas, { titulo: 'Progreso por proyecto', ancho: w, aire: c.aire, ...(alto ? { alto } : {}) })
 }
 
 function tarjetaContexto(c: Ctx, w: number): Linea[] {

@@ -13,7 +13,7 @@ import type { GitCache } from './git.ts'
 import type { Casillas, Dia, Ficha } from './panel-datos.ts'
 import { casillas, interpretarFicha, seccion, siguienteAccion, usoMasReciente } from './panel-datos.ts'
 import { interpretarProyectos } from './proyectos.ts'
-import { mismoNombre, nombre, unir } from './rutas.ts'
+import { unir } from './rutas.ts'
 import { horaLocal, ultimosDias, ultimoReinicio } from './tiempo.ts'
 
 export type FichaLeida = Ficha & { mtime: number }
@@ -51,9 +51,9 @@ export type DatosPanel = {
   git: Record<string, GitPanel>
   usoEstimado: UsoEstimado | null
   rex_estacional: boolean
-  /** Carpetas en «Hacer seguimiento» y en todo PROYECTOS.md (sin la carpeta de control). */
+  /** Los proyectos de «Hacer seguimiento», en el orden de PROYECTOS.md (tengan ficha o no). */
+  seguimiento: string[]
   enSeguimiento: number
-  carpetasTotal: number
 }
 
 /** Suma los tokens de las horas desde `desde` (en ms) hasta ahora. */
@@ -220,10 +220,8 @@ export async function leerPanel($: EngineInterface, config: Config, desfase: num
     ultimoRefresh: inst?.ms ?? null,
     usoEstimado,
     rex_estacional: config.rex.estacional,
+    seguimiento: (doc?.seguimiento ?? []).map(e => e.carpeta),
     enSeguimiento: doc?.seguimiento.length ?? 0,
-    carpetasTotal: doc
-      ? [...doc.seguimiento, ...doc.noSeguimiento, ...doc.sinClasificar].filter(e => !mismoNombre(e.carpeta, nombre(config.general_dir), config.raiz_proyectos)).length
-      : 0,
     git: Object.fromEntries(
       Object.entries(git?.repos ?? {}).map(([c, r]) => [c, { rama: r.rama, ahead: r.ahead, cambios: r.cambios, sucio_desde: r.sucio_desde, error: r.error, ci: r.ci ?? null }]),
     ),

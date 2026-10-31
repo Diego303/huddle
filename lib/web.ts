@@ -26,7 +26,7 @@ import {
 } from './panel-datos.ts'
 import { unir } from './rutas.ts'
 import type { Adorno } from '../mod/rex.ts'
-import { adornoHoy, duracion, fechaCabecera, fichasPanel, reinicio, semana, textoRacha } from '../mod/panel.ts'
+import { adornoHoy, duracion, fechaCabecera, fichasPanel, proyectosEnSeguimiento, reinicio, resumenSeguimiento, semana, textoRacha } from '../mod/panel.ts'
 
 // ------------------------------------------------------------- el modelo
 
@@ -55,7 +55,7 @@ export type ModeloWeb = {
   }
   arbol: FilaArbol[]
   rex: { estado: EstadoRex; bocadillo: string; racha: string; nivel: string; barra: string; resto: string; adorno: Adorno }
-  proyectos: { titulo: string; filas: BarraWeb[]; vacio: string | null }
+  proyectos: { titulo: string; filas: BarraWeb[]; nota: string }
   contexto: BarraWeb[]
   alertas: { texto: string; grave: boolean }[]
   actividad: { dias: DiaWeb[]; nota: string }
@@ -178,13 +178,19 @@ export function modeloWeb(d: DatosPanel, ahora: number, generado: string): Model
   const enNivel = d.turnosTotales % 100
   const llenos = Math.round((enNivel / 100) * 8)
 
-  const proyectos: BarraWeb[] = fichas.map((f, i) => ({
-    nombre: f.carpeta,
-    detalle: [f.fase, f.tareas.total > 0 ? `${f.tareas.hechas}/${f.tareas.total}` : ''].filter(Boolean).join(' · '),
-    pct: f.pct,
-    texto: f.pct === null ? '—' : `${f.pct}%`,
-    color: /pausa/i.test(f.fase) ? WEB.inactiva : PROYECTO[i % PROYECTO.length]!,
-  }))
+  const enSeguimiento = proyectosEnSeguimiento(d, fichas)
+  const proyectos: BarraWeb[] = enSeguimiento.map(({ nombre, ficha }, i) =>
+    ficha
+      ? {
+          nombre,
+          detalle: [ficha.fase, ficha.tareas.total > 0 ? `${ficha.tareas.hechas}/${ficha.tareas.total}` : 'sin tareas'].filter(Boolean).join(' · '),
+          pct: ficha.pct,
+          texto: ficha.pct === null ? '—' : `${ficha.pct}%`,
+          color: /pausa/i.test(ficha.fase) ? WEB.inactiva : PROYECTO[i % PROYECTO.length]!,
+        }
+      : { nombre, detalle: 'sin ficha', pct: null, texto: '—', color: WEB.inactiva },
+  )
+  const sinFicha = enSeguimiento.filter(p => p.ficha === null).length
 
   const contexto: BarraWeb[] = vistas
     .filter(v => v.estado !== 'inactiva')
@@ -239,9 +245,9 @@ export function modeloWeb(d: DatosPanel, ahora: number, generado: string): Model
       adorno: adornoHoy(d, ahora),
     },
     proyectos: {
-      titulo: `${d.enSeguimiento} de ${d.carpetasTotal}`,
+      titulo: resumenSeguimiento(enSeguimiento.length, 0)[0] ?? '',
       filas: proyectos,
-      vacio: fichas.length === 0 ? `${d.enSeguimiento} de ${d.carpetasTotal} en seguimiento · /proyectos` : null,
+      nota: resumenSeguimiento(enSeguimiento.length, sinFicha)[1] ?? '',
     },
     contexto,
     alertas,
