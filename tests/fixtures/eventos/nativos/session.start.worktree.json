@@ -1,0 +1,271 @@
+{
+  "evento": "session.start",
+  "capturado": "2026-10-31T00:27:51.620Z",
+  "datos": {
+    "entrada": {
+      "cwd": "/home/usuario/proyectos/proyecto-a-wt",
+      "surface": "terminal",
+      "isInteractive": true
+    },
+    "id": "00000000-0000-4000-8000-000000000001",
+    "cwd": {
+      "ms": 4,
+      "r": "/home/usuario/proyectos/proyecto-a-wt"
+    },
+    "root": {
+      "ms": 3,
+      "r": "/home/usuario/proyectos/proyecto-a-wt"
+    },
+    "model": {
+      "ms": 10,
+      "r": "claude-haiku-5-5"
+    },
+    "repo": {
+      "ms": 9,
+      "r": {
+        "root": "/home/usuario/proyectos/proyecto-a",
+        "remote": null,
+        "internal": false,
+        "name": null
+      }
+    },
+    "version": {
+      "ms": 0,
+      "r": {
+        "version": "2.1.314",
+        "base": "2.1.314",
+        "builtAt": "2026-10-29T20:53:59Z"
+      }
+    },
+    "surfaces": {
+      "ms": 1,
+      "r": [
+        "terminal"
+      ]
+    },
+    "usage": {
+      "ms": 1,
+      "r": {
+        "startedAt": 1793406203377,
+        "context": {
+          "tokens": 34676,
+          "window": 1000000,
+          "percent": 3
+        },
+        "rateLimits": [
+          {
+            "kind": "five_hour",
+            "percentUsed": 12,
+            "resetsAt": "2026-10-31T04:30:00.000Z"
+          },
+          {
+            "kind": "seven_day",
+            "percentUsed": 32,
+            "resetsAt": "2026-11-06T06:00:00.000Z"
+          }
+        ],
+        "cost": {
+          "usd": 0.00279199
+        }
+      }
+    },
+    "pluginRoot": "/home/usuario/.claude/plugins/huddle-sonda",
+    "tiempos": {
+      "fsWrite": {
+        "ms": 1
+      },
+      "procMv": {
+        "ms": 5,
+        "r": {
+          "exitCode": 0,
+          "stdout": "",
+          "stderr": "",
+          "isStdoutTruncated": false,
+          "isStderrTruncated": false
+        }
+      },
+      "procTrue": {
+        "ms": 3,
+        "r": {
+          "exitCode": 0,
+          "stdout": "",
+          "stderr": "",
+          "isStdoutTruncated": false,
+          "isStderrTruncated": false
+        }
+      },
+      "gitRevParse": {
+        "ms": 6,
+        "r": {
+          "exitCode": 0,
+          "stdout": "/home/usuario/proyectos/proyecto-a/.git\n/home/usuario/proyectos/proyecto-a-wt\nfeat-x\n",
+          "stderr": "",
+          "isStdoutTruncated": false,
+          "isStderrTruncated": false
+        }
+      },
+      "fsList": {
+        "ms": 23,
+        "r": [
+          {
+            "name": "_prueba.json",
+            "kind": "file",
+            "size": 7,
+            "mtimeMs": 1793406471569.1455,
+            "isLink": false
+          },
+          {
+            "name": "0000-ui.render-pane.json",
+            "kind": "file",
+            "size": 402,
+            "mtimeMs": 1793406471538.3455,
+            "isLink": false
+          },
+          {
+            "name": "0001-session.start.json",
+            "kind": "file",
+            "size": 4350,
+            "mtimeMs": 1793406207701.3987,
+            "isLink": false
+          },
+          {
+            "name": "0002-ui.open-sin-pedir.json",
+            "kind": "file",
+            "size": 128,
+            "mtimeMs": 1793406207757.8596,
+            "isLink": false
+          },
+          {
+            "name": "0003-ui.render-pane.json",
+            "kind": "file",
+            "size": 402,
+            "mtimeMs": 1793406207766.6594,
+            "isLink": false
+          },
+          {
+            "name": "0004-tick-1.json",
+            "kind": "file",
+            "size": 88,
+            "mtimeMs": 1793406209275.2344,
+            "isLink": false
+          },
+          {
+            "name": "0005-tick-2.json",
+            "kind": "file",
+            "size": 88,
+            "mtimeMs": 1793406211281.6343,
+            "isLink": false
+          },
+          {
+            "name": "0006-tick-3.json",
+            "kind": "file",
+            "size": 88,
+            "mtimeMs": 1793406212780.7197,
+            "isLink": false
+          },
+          {
+            "name": "0007-prompt.submit.json",
+            "kind": "file",
+            "size": 167,
+            "mtimeMs": 1793406236085.3801,
+            "isLink": false
+          },
+          {
+            "name": "0008-classic-UserPromptSubmit.json",
+            "kind": "file",
+            "size": 825,
+            "mtimeMs": 1793406236089.7803,
+            "isLink": false
+          },
+          {
+            "name": "0009-turn.start.json",
+            "kind": "file",
+            "size": 151,
+            "mtimeMs": 1793406236133.7803,
+            "isLink": false
+          },
+          {
+            "name": "0010-tool.call-Write.json",
+            "kind": "file",
+            "size": 338,
+            "mtimeMs": 1793406238037.88,
+            "isLink": false
+          },
+          {
+            "name": "0011-classic-PreToolUse.json",
+            "kind": "file",
+            "size": 316,
+            "mtimeMs": 1793406238068.68,
+            "isLink": false
+          },
+          {
+            "name": "0012-classic-PermissionRequest.json",
+            "kind": "file",
+            "size": 1449,
+            "mtimeMs": 1793406238139.0798,
+            "isLink": false
+          },
+          {
+            "name": "0013-ui.render-pane.json",
+            "kind": "file",
+            "size": 402,
+            "mtimeMs": 1793406238143.48,
+            "isLink": false
+          },
+          {
+            "name": "0014-classic-Notification.json",
+            "kind": "file",
+            "size": 844,
+            "mtimeMs": 1793406249125.7612,
+            "isLink": false
+          },
+          {
+            "name": "0015-tool.result-Write.json",
+            "kind": "file",
+            "size": 265,
+            "mtimeMs": 1793406271382.7158,
+            "isLink": false
+          },
+          {
+            "name": "0016-turn.complete.json",
+            "kind": "file",
+            "size": 1089,
+            "mtimeMs": 1793406271457.5159,
+            "isLink": false
+          }
+        ]
+      },
+      "fsRead": {
+        "ms": 2,
+        "r": "{\"a\":1}"
+      },
+      "fsStat": {
+        "ms": 3,
+        "r": {
+          "kind": "file",
+          "size": 7,
+          "mtimeMs": 1793406471569.1455,
+          "isLink": false
+        }
+      },
+      "procRm": {
+        "ms": 5,
+        "r": {
+          "exitCode": 0,
+          "stdout": "",
+          "stderr": "",
+          "isStdoutTruncated": false,
+          "isStderrTruncated": false
+        }
+      },
+      "envHome": {
+        "ms": 1,
+        "r": "/home/usuario"
+      },
+      "envWsl": {
+        "ms": 0,
+        "r": "Ubuntu-22.04"
+      }
+    }
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "evento": "turn.complete",
+  "capturado": "2026-10-31T00:24:31.429Z",
+  "datos": {
+    "e": {
+      "answer": "<redactado:0>",
+      "durationMs": 2553,
+      "isAborted": false,
+      "turnId": "00000000-0000-4000-8000-000000000015",
+      "reason": "answer",
+      "usage": {
+        "input_tokens": 2,
+        "output_tokens": 225,
+        "cache_read_input_tokens": 23069,
+        "cache_creation_input_tokens": 11605,
+        "model": "claude-haiku-5-5"
+      }
+    },
+    "usage": {
+      "ms": 16,
+      "r": {
+        "startedAt": 1793406203377,
+        "context": {
+          "tokens": 34676,
+          "window": 1000000,
+          "percent": 3
+        },
+        "rateLimits": [
+          {
+            "kind": "five_hour",
+            "percentUsed": 12,
+            "resetsAt": "2026-10-31T04:30:00.000Z"
+          },
+          {
+            "kind": "seven_day",
+            "percentUsed": 32,
+            "resetsAt": "2026-11-06T06:00:00.000Z"
+          }
+        ],
+        "cost": {
+          "usd": 0.00279199
+        }
+      }
+    },
+    "agentes": {
+      "ms": 2,
+      "r": []
+    }
+  }
+}

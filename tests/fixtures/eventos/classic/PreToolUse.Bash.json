@@ -1,0 +1,10 @@
+{
+  "evento": "classic.PreToolUse",
+  "capturado": "2026-10-31T00:22:18.744Z",
+  "datos": {
+    "command": "git status",
+    "description": "Show working tree status",
+    "tool": "Bash",
+    "tool_use_id": "toolu_fixture0001"
+  }
+}

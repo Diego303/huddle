@@ -1,0 +1,355 @@
+{
+  "evento": "session.start",
+  "capturado": "2026-10-31T00:27:42.848Z",
+  "datos": {
+    "entrada": {
+      "cwd": "/home/usuario/proyectos/proyecto-a",
+      "surface": "terminal",
+      "isInteractive": true
+    },
+    "id": "00000000-0000-4000-8000-000000000003",
+    "cwd": {
+      "ms": 4,
+      "r": "/home/usuario/proyectos/proyecto-a"
+    },
+    "root": {
+      "ms": 2,
+      "r": "/home/usuario/proyectos/proyecto-a"
+    },
+    "model": {
+      "ms": 2,
+      "r": "claude-haiku-5-5"
+    },
+    "repo": {
+      "ms": 6175,
+      "r": {
+        "root": "/home/usuario/proyectos/proyecto-a",
+        "remote": null,
+        "internal": false,
+        "name": null
+      }
+    },
+    "version": {
+      "ms": 1,
+      "r": {
+        "version": "2.1.314",
+        "base": "2.1.314",
+        "builtAt": "2026-10-29T20:53:59Z"
+      }
+    },
+    "surfaces": {
+      "ms": 0,
+      "r": [
+        "terminal"
+      ]
+    },
+    "usage": {
+      "ms": 2,
+      "r": {
+        "startedAt": 1793406095708,
+        "context": {
+          "tokens": 37481,
+          "window": 1000000,
+          "percent": 4
+        },
+        "rateLimits": [
+          {
+            "kind": "five_hour",
+            "percentUsed": 12,
+            "resetsAt": "2026-10-31T04:30:00.000Z"
+          },
+          {
+            "kind": "seven_day",
+            "percentUsed": 32,
+            "resetsAt": "2026-11-06T06:00:00.000Z"
+          }
+        ],
+        "cost": {
+          "usd": 0.00816096
+        }
+      }
+    },
+    "pluginRoot": "/home/usuario/.claude/plugins/huddle-sonda",
+    "tiempos": {
+      "fsWrite": {
+        "ms": 2
+      },
+      "procMv": {
+        "ms": 10,
+        "r": {
+          "exitCode": 0,
+          "stdout": "",
+          "stderr": "",
+          "isStdoutTruncated": false,
+          "isStderrTruncated": false
+        }
+      },
+      "procTrue": {
+        "ms": 14,
+        "r": {
+          "exitCode": 0,
+          "stdout": "",
+          "stderr": "",
+          "isStdoutTruncated": false,
+          "isStderrTruncated": false
+        }
+      },
+      "gitRevParse": {
+        "ms": -6664,
+        "r": {
+          "exitCode": 0,
+          "stdout": ".git\n/home/usuario/proyectos/proyecto-a\nmain\n",
+          "stderr": "",
+          "isStdoutTruncated": false,
+          "isStderrTruncated": false
+        }
+      },
+      "fsList": {
+        "ms": 24,
+        "r": [
+          {
+            "name": "_prueba.json",
+            "kind": "file",
+            "size": 7,
+            "mtimeMs": 1793406469453.3145,
+            "isLink": false
+          },
+          {
+            "name": "0000-ui.render-pane.json",
+            "kind": "file",
+            "size": 406,
+            "mtimeMs": 1793406463265.9866,
+            "isLink": false
+          },
+          {
+            "name": "0001-session.start.json",
+            "kind": "file",
+            "size": 10035,
+            "mtimeMs": 1793406451805.02,
+            "isLink": false
+          },
+          {
+            "name": "0002-ui.open-sin-pedir.json",
+            "kind": "file",
+            "size": 128,
+            "mtimeMs": 1793406451849.02,
+            "isLink": false
+          },
+          {
+            "name": "0003-tick-1.json",
+            "kind": "file",
+            "size": 88,
+            "mtimeMs": 1793406453356.5957,
+            "isLink": false
+          },
+          {
+            "name": "0003-ui.render-pane.json",
+            "kind": "file",
+            "size": 406,
+            "mtimeMs": 1793406112655.3215,
+            "isLink": false
+          },
+          {
+            "name": "0004-tick-1.json",
+            "kind": "file",
+            "size": 88,
+            "mtimeMs": 1793406114669.4817,
+            "isLink": false
+          },
+          {
+            "name": "0004-tick-2.json",
+            "kind": "file",
+            "size": 88,
+            "mtimeMs": 1793406455358.5955,
+            "isLink": false
+          },
+          {
+            "name": "0005-tick-2.json",
+            "kind": "file",
+            "size": 88,
+            "mtimeMs": 1793406116671.4817,
+            "isLink": false
+          },
+          {
+            "name": "0005-tick-3.json",
+            "kind": "file",
+            "size": 88,
+            "mtimeMs": 1793406457369.3955,
+            "isLink": false
+          },
+          {
+            "name": "0006-tick-3.json",
+            "kind": "file",
+            "size": 88,
+            "mtimeMs": 1793406118189.433,
+            "isLink": false
+          },
+          {
+            "name": "0007-prompt.submit.json",
+            "kind": "file",
+            "size": 168,
+            "mtimeMs": 1793406137096.4707,
+            "isLink": false
+          },
+          {
+            "name": "0008-classic-UserPromptSubmit.json",
+            "kind": "file",
+            "size": 814,
+            "mtimeMs": 1793406137140.4707,
+            "isLink": false
+          },
+          {
+            "name": "0009-turn.start.json",
+            "kind": "file",
+            "size": 152,
+            "mtimeMs": 1793406137188.8706,
+            "isLink": false
+          },
+          {
+            "name": "0010-tool.call-Bash.json",
+            "kind": "file",
+            "size": 245,
+            "mtimeMs": 1793406138722.4177,
+            "isLink": false
+          },
+          {
+            "name": "0011-classic-PreToolUse.json",
+            "kind": "file",
+            "size": 224,
+            "mtimeMs": 1793406138740.0178,
+            "isLink": false
+          },
+          {
+            "name": "0012-tool.call-Agent.json",
+            "kind": "file",
+            "size": 329,
+            "mtimeMs": 1793406139373.6177,
+            "isLink": false
+          },
+          {
+            "name": "0013-classic-PreToolUse.json",
+            "kind": "file",
+            "size": 252,
+            "mtimeMs": 1793406139378.0178,
+            "isLink": false
+          },
+          {
+            "name": "0014-agent.spawn.json",
+            "kind": "file",
+            "size": 407,
+            "mtimeMs": 1793406140918.0176,
+            "isLink": false
+          },
+          {
+            "name": "0015-turn.start.json",
+            "kind": "file",
+            "size": 188,
+            "mtimeMs": 1793406140992.8176,
+            "isLink": false
+          },
+          {
+            "name": "0016-classic-PostToolUse.json",
+            "kind": "file",
+            "size": 1393,
+            "mtimeMs": 1793406140992.8176,
+            "isLink": false
+          },
+          {
+            "name": "0017-classic-SubagentStart.json",
+            "kind": "file",
+            "size": 810,
+            "mtimeMs": 1793406140992.8176,
+            "isLink": false
+          },
+          {
+            "name": "0018-tool.result-Agent.json",
+            "kind": "file",
+            "size": 809,
+            "mtimeMs": 1793406141063.2178,
+            "isLink": false
+          },
+          {
+            "name": "0019-classic-PostToolUse.json",
+            "kind": "file",
+            "size": 1213,
+            "mtimeMs": 1793406141138.0176,
+            "isLink": false
+          },
+          {
+            "name": "0020-tool.result-Bash.json",
+            "kind": "file",
+            "size": 427,
+            "mtimeMs": 1793406141146.8176,
+            "isLink": false
+          },
+          {
+            "name": "0021-classic-PostToolBatch.json",
+            "kind": "file",
+            "size": 1521,
+            "mtimeMs": 1793406141168.8176,
+            "isLink": false
+          },
+          {
+            "name": "0022-classic-MessageDisplay.json",
+            "kind": "file",
+            "size": 916,
+            "mtimeMs": 1793406142532.3162,
+            "isLink": false
+          },
+          {
+            "name": "0023-classic-Stop.json",
+            "kind": "file",
+            "size": 1122,
+            "mtimeMs": 1793406142536.7163,
+            "isLink": false
+          },
+          {
+            "name": "0024-turn.complete.json",
+            "kind": "file",
+            "size": 1266,
+            "mtimeMs": 1793406142611.516,
+            "isLink": false
+          },
+          {
+            "name": "0025-tool.call-Bash.json",
+            "kind": "file",
+            "size": 399,
+            "mtimeMs": 1793406142989.9163,
+            "isLink": false
+          }
+        ]
+      },
+      "fsRead": {
+        "ms": 2,
+        "r": "{\"a\":1}"
+      },
+      "fsStat": {
+        "ms": 1,
+        "r": {
+          "kind": "file",
+          "size": 7,
+          "mtimeMs": 1793406469453.3145,
+          "isLink": false
+        }
+      },
+      "procRm": {
+        "ms": 5,
+        "r": {
+          "exitCode": 0,
+          "stdout": "",
+          "stderr": "",
+          "isStdoutTruncated": false,
+          "isStderrTruncated": false
+        }
+      },
+      "envHome": {
+        "ms": 0,
+        "r": "/home/usuario"
+      },
+      "envWsl": {
+        "ms": 1,
+        "r": "Ubuntu-22.04"
+      }
+    }
+  }
+}

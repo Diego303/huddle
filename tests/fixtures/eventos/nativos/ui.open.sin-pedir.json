@@ -1,0 +1,10 @@
+{
+  "evento": "ui.open.sin-pedir",
+  "capturado": "2026-10-31T00:27:42.892Z",
+  "datos": {
+    "ms": 1,
+    "r": {
+      "isPlaced": true
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "evento": "tool.call.Write",
+  "capturado": "2026-10-31T00:23:58.033Z",
+  "datos": {
+    "e": {
+      "file_path": "/tmp/claude-1000/-home-usuario-proyectos-proyecto-a-wt/nota.txt",
+      "content": "<redactado:13>",
+      "tool": "Write",
+      "tool_use_id": "toolu_fixture0005"
+    }
+  }
+}

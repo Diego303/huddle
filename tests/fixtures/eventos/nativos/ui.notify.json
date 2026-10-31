@@ -1,0 +1,11 @@
+{
+  "evento": "ui.notify",
+  "capturado": "2026-10-31T00:28:18.575Z",
+  "datos": {
+    "ms": 46,
+    "r": {
+      "isSent": false,
+      "reason": "no-channel"
+    }
+  }
+}

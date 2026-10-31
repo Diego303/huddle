@@ -1,0 +1,13 @@
+{
+  "evento": "tool.call.Bash",
+  "capturado": "2026-10-31T00:22:22.986Z",
+  "datos": {
+    "e": {
+      "command": "ls -la /home/usuario/proyectos/proyecto-a",
+      "description": "List all files in proyecto-a with details",
+      "tool": "Bash",
+      "tool_use_id": "toolu_fixture0002",
+      "agentId": "a0000000000000001"
+    }
+  }
+}

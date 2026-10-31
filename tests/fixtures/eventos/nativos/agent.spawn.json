@@ -1,0 +1,18 @@
+{
+  "evento": "agent.spawn",
+  "capturado": "2026-10-31T00:22:20.510Z",
+  "datos": {
+    "tool_use_id": "toolu_fixture0003",
+    "prompt": "<redactado:212>",
+    "description": "listar ficheros",
+    "subagentType": "Explore",
+    "provider": {
+      "plugin": "engine",
+      "tier": "core"
+    },
+    "parentModel": "claude-haiku-5-5",
+    "permissionMode": "auto",
+    "background": true,
+    "fork": false
+  }
+}

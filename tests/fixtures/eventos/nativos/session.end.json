@@ -1,0 +1,11 @@
+{
+  "evento": "session.end",
+  "capturado": "2026-10-31T00:31:22.503Z",
+  "datos": {
+    "reason": "prompt_input_exit",
+    "sessionId": "00000000-0000-4000-8000-000000000002",
+    "resume": {
+      "id": "00000000-0000-4000-8000-000000000002"
+    }
+  }
+}

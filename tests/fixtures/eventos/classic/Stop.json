@@ -1,0 +1,20 @@
+{
+  "evento": "classic.Stop",
+  "capturado": "2026-10-31T00:22:31.944Z",
+  "datos": {
+    "session_id": "00000000-0000-4000-8000-000000000003",
+    "transcript_path": "/home/usuario/.claude/projects/-home-usuario-proyectos-proyecto-a/00000000-0000-4000-8000-000000000003.jsonl",
+    "cwd": "/home/usuario/proyectos/proyecto-a",
+    "scratchpad_dir": "/tmp/claude-1000/-home-usuario-proyectos-proyecto-a/00000000-0000-4000-8000-000000000003/scratchpad",
+    "prompt_id": "00000000-0000-4000-8000-000000000005",
+    "permission_mode": "auto",
+    "effort": {
+      "level": "medium"
+    },
+    "hook_event_name": "Stop",
+    "stop_hook_active": false,
+    "last_assistant_message": "<redactado:384>",
+    "background_tasks": [],
+    "session_crons": []
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "evento": "prompt.submit",
+  "capturado": "2026-10-31T00:22:17.096Z",
+  "datos": {
+    "text": "<redactado:203>",
+    "wait": false,
+    "origin": {
+      "kind": "composer"
+    }
+  }
+}

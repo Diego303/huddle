@@ -1,0 +1,14 @@
+{
+  "evento": "tool.result.Write",
+  "capturado": "2026-10-31T00:24:31.333Z",
+  "datos": {
+    "tool_use_id": "toolu_fixture0005",
+    "ms": 33300,
+    "r": {
+      "ref": 1,
+      "result": "<string:443>",
+      "text": "<redactado:436>",
+      "isError": true
+    }
+  }
+}

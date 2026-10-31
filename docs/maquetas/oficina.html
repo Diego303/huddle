@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>huddle · maqueta de referencia</title>
+<style>
+:root{--surface-0:#f5f4ef;--surface-1:#faf9f5;--surface-2:#ffffff;--text-primary:#1f1e1d;--text-secondary:#5f5e5a;--text-muted:#888780;--border:rgba(0,0,0,.12);--border-strong:rgba(0,0,0,.2);--border-stronger:rgba(0,0,0,.4);--bg-success:#EAF3DE;--text-success:#3B6D11;--bg-warning:#FAEEDA;--text-warning:#854F0B;--text-danger:#A32D2D;--font-sans:system-ui,-apple-system,"Segoe UI",sans-serif;--font-mono:"Cascadia Mono","JetBrains Mono",ui-monospace,Consolas,monospace;--radius:8px}
+@media (prefers-color-scheme:dark){:root{--surface-0:#1a1a19;--surface-1:#232322;--surface-2:#2b2b29;--text-primary:#f1efe8;--text-secondary:#b4b2a9;--text-muted:#888780;--border:rgba(255,255,255,.12);--border-strong:rgba(255,255,255,.2);--border-stronger:rgba(255,255,255,.4);--bg-success:#27500A;--text-success:#C0DD97;--bg-warning:#633806;--text-warning:#FAC775;--text-danger:#F09595}}
+body{margin:0;padding:24px;background:var(--surface-0);color:var(--text-primary);font-family:var(--font-sans);max-width:760px}
+button{font:inherit;font-size:12px;color:var(--text-primary);background:transparent;border:.5px solid var(--border-strong);border-radius:var(--radius);padding:4px 10px;cursor:pointer}
+button:hover{background:var(--surface-1)}
+input{font:inherit;padding:4px 8px;border:.5px solid var(--border-strong);border-radius:var(--radius);background:var(--surface-2);color:var(--text-primary)}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.nota-ref{font-size:12px;color:var(--text-secondary);margin:0 0 12px}
+</style></head><body>
+<p class="nota-ref">Maqueta de referencia · Huddle · vista Oficina (datos inventados). Los botones cambian entre modo sesiones y modo agentes.</p>
+<style>
+.t{font-family:var(--font-mono);font-size:12px}
+.mut{color:var(--text-secondary)}
+.room{background:var(--surface-2);border:0.5px solid var(--border);border-radius:8px;padding:8px 10px}
+.desk{display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px;border-radius:6px}
+.desk:hover{background:var(--surface-1)}
+.md button.on{background:var(--surface-1);border-color:var(--border-stronger)}
+@keyframes typ{50%{transform:translateY(-0.6px)}}
+@keyframes blink{50%{opacity:.3}}
+.ty{animation:typ .25s steps(2) infinite}
+.bl{animation:blink 1s steps(2) infinite}
+</style>
+<div class="t" style="background:var(--surface-1);border-radius:12px;padding:12px;border:0.5px solid var(--border)">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px;flex-wrap:wrap">
+<div class="md" id="md" style="display:flex;gap:6px"></div>
+<div id="sum" class="mut"></div>
+</div>
+<div id="of" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px"></div>
+<div class="mut" style="margin-top:10px;font-size:11px"><span style="color:#1D9E75">●</span> trabajando <span style="color:#BA7517">●</span> espera aprobación <span style="color:#888780">●</span> inactivo · rol: <span style="color:#D85A30">■</span> lead <span style="color:#7F77DD">■</span> explore <span style="color:#378ADD">■</span> plan <span style="color:#1D9E75">■</span> tests</div>
+</div>
+<script>
+const R={lead:"#D85A30",explore:"#7F77DD",plan:"#378ADD",tests:"#1D9E75",sesion:"#D85A30"};
+const SES={struo:[["struo · feat-auth","sesion","w","editando auth.ts"],["struo · feat-export","sesion","a","espera GATE#1"]],"proyecto-b":[["prb · main","sesion","w","migración v2"]],"proyecto-c":[["prc · main","sesion","i","inactiva 3h"]],GENERAL:[["gen · torre","sesion","w","/refresh"]]};
+const AG={struo:[["STR-lead-01","lead","w","feat-auth"],["STR-explore-01","explore","w","usos de token"],["STR-tests-01","tests","w","vitest 212/240"],["STR-lead-02","lead","a","feat-export"]],"proyecto-b":[["PRB-lead-01","lead","w","migración"],["PRB-plan-01","plan","w","esquema v2"],["PRB-explore-01","explore","w","leyendo docs"],["PRB-explore-02","explore","w","leyendo SQL"]],GENERAL:[["GEN-lead-01","lead","w","torre"]]};
+let mode="sesiones";
+function worker(role,s){const c=R[role];
+let p=`<rect x="1" y="5" width="1" height="7" fill="#888780"/>`;
+if(s=="i"){p+=`<rect x="3" y="4" width="3" height="3" fill="#F0997B"/><rect x="2" y="6" width="5" height="3" fill="${c}"/><rect x="6" y="7" width="3" height="1" fill="${c}"/><text x="4" y="2.5" font-size="3" fill="#888780" font-family="monospace">z</text>`}
+else if(s=="a"){p+=`<rect x="3" y="2" width="3" height="3" fill="#F0997B"/><rect x="2" y="5" width="5" height="3" fill="${c}"/><rect x="6" y="0" width="1" height="5" fill="${c}"/><text x="7.5" y="3" font-size="3.5" fill="#BA7517" font-family="monospace" class="bl">!</text>`}
+else{p+=`<rect x="3" y="2" width="3" height="3" fill="#F0997B"/><rect x="2" y="5" width="5" height="3" fill="${c}"/><g class="ty"><rect x="7" y="6" width="2" height="1" fill="${c}"/></g>`}
+const scr=s=="w"?`<rect x="10" y="4" width="4" height="0.6" fill="${c}"/><rect x="10" y="5.2" width="2.5" height="0.6" fill="${c}" class="bl"/>`:s=="a"?`<rect x="11.5" y="4.3" width="1" height="1.5" fill="#BA7517" class="bl"/>`:"";
+return `<svg width="64" height="56" viewBox="0 0 16 14" style="image-rendering:pixelated" role="img"><title>${role} ${s}</title><rect x="9" y="3" width="6" height="4" fill="#2C2C2A"/>${scr}<rect x="11.5" y="7" width="1" height="1" fill="#5F5E5A"/><rect x="0" y="8" width="16" height="1" fill="#B4B2A9"/><rect x="1" y="9" width="1" height="5" fill="#B4B2A9"/><rect x="14" y="9" width="1" height="5" fill="#B4B2A9"/>${p}</svg>`}
+function draw(){const data=mode=="sesiones"?SES:AG;
+document.getElementById('md').innerHTML=["sesiones","agentes"].map(k=>`<button class="${k==mode?'on':''}" onclick="mode='${k}';draw()">Modo ${k}</button>`).join('');
+const all=Object.values(data).flat();const n=s=>all.filter(x=>x[2]==s).length;
+document.getElementById('sum').innerHTML=`${all.length} ${mode} · <span style="color:#1D9E75">${n('w')} trabajando</span> · <span style="color:#BA7517">${n('a')} esperan</span> · ${n('i')} inactivas`;
+document.getElementById('of').innerHTML=Object.entries(data).map(([proj,ws])=>`<div class="room" style="${ws.length>2?'grid-column:span 2':''}"><div style="display:flex;justify-content:space-between"><span style="font-weight:500">${proj}</span><span class="mut" style="font-size:11px">${ws.length} ${ws.length==1?(mode=='sesiones'?'sesión':'agente'):mode}</span></div><div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">${ws.map(w=>`<div class="desk" title="${w[0]} · ${w[3]}">${worker(w[1],w[2])}<div style="font-size:11px"><span style="color:${{w:'#1D9E75',a:'#BA7517',i:'#888780'}[w[2]]}">●</span> ${w[0]}</div><div class="mut" style="font-size:11px">${w[3]}</div></div>`).join('')}</div></div>`).join('')}
+draw();
+</script>
+</body></html>

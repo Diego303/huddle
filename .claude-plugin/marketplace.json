@@ -1,0 +1,6 @@
+{
+  "name": "huddle",
+  "description": "Huddle: panel de sesiones, agentes y proyectos de Claude Code, con Rex.",
+  "owner": { "name": "Huddle" },
+  "plugins": [{ "name": "huddle", "source": "./", "description": "Tu equipo de Claude Code, de un vistazo: proyectos, sesiones y agentes en un solo panel." }]
+}
