@@ -85,6 +85,8 @@ huddle · oficina  Sesiones  [Agentes]   3 sesiones · 1 trabajando · 1 espera 
 
 Listo. A partir de ahora, cada vez que abras Claude Code en esa carpeta verás el panel.
 
+Una guía corta de todo esto, paso a paso: [`docs/primeros-pasos.md`](docs/primeros-pasos.md).
+
 > **El panel sale solo** a partir de 144 columnas. En un terminal más estrecho, ábrelo con `/panel`. Con la pantalla completa de Claude Code se acopla a la derecha de la conversación (hasta el 45 % del ancho); sin ella, aparece encima del prompt, a todo el ancho.
 
 ## Dónde se activa
