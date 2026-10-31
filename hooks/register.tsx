@@ -1,14 +1,36 @@
 // Punto de entrada del mod: registra los comandos y los hooks, y delega en lib/ y mod/.
+// Cada hook de estado hace su trabajo en memoria y llama a `next(e)` enseguida;
+// si algo falla, su `.catch` deja seguir la cadena como si Huddle no estuviera.
 
 import type { Register } from 'claude-code'
 
 import { configurar } from '../lib/comandos/configurar.ts'
 import { directorio } from '../lib/comandos/directorio.ts'
 import { proyectos } from '../lib/comandos/proyectos.ts'
+import { esHerramientaDeAgente } from '../lib/detalle.ts'
+import {
+  anotarOrigen,
+  arrancarSesion,
+  cambiarDirectorio,
+  cerrarSesion,
+  contarTurno,
+  pedirUso,
+  registrar,
+} from '../lib/sesion.ts'
 
 /** Un error de un comando se cuenta como su salida, sin romper la sesión. */
 function fallo(err: unknown): { text: string } {
   return { text: `Algo falló: ${err instanceof Error ? err.message : String(err)}` }
+}
+
+/** Lo que devuelve Agent: el `agentId` si el subagente sigue en segundo plano. */
+function lanzamiento(r: unknown): { agenteLanzado?: string; agenteTerminado: boolean } {
+  const o = (r ?? {}) as { deny?: unknown; isError?: unknown; result?: { agentId?: unknown; status?: unknown } }
+  if (o.deny !== undefined || o.isError === true) return { agenteTerminado: true }
+  const id = o.result?.agentId
+  const status = String(o.result?.status ?? '')
+  if (typeof id === 'string' && status.startsWith('async')) return { agenteLanzado: id, agenteTerminado: false }
+  return { agenteTerminado: true }
 }
 
 export const register: Register = on => {
@@ -28,8 +50,101 @@ export const register: Register = on => {
       name: 'proyectos',
       description: 'Huddle: busca carpetas nuevas en tu directorio de proyectos',
     })
+    void arrancarSesion($, e.isInteractive)
     return r
-  })
+  }).catch(($, e, next) => next(e))
+
+  on('classic.SessionStart', ($, e, next) => {
+    anotarOrigen($, e)
+    return next(e)
+  }).catch(($, e, next) => next(e))
+
+  on('session.end', async ($, e, next) => {
+    await cerrarSesion($, e.reason)
+    return next(e)
+  }).catch(($, e, next) => next(e))
+
+  on('prompt.submit', ($, e, next) => {
+    if (e.origin.kind === 'composer' && e.command === undefined && e.isMeta !== true) contarTurno($)
+    return next(e)
+  }).catch(($, e, next) => next(e))
+
+  on('turn.start', ($, e, next) => {
+    registrar($, e.agentId === undefined ? { tipo: 'turno_inicio' } : { tipo: 'turno_inicio', agentId: e.agentId })
+    return next(e)
+  }).catch(($, e, next) => next(e))
+
+  on('turn.complete', ($, e, next) => {
+    if (e.agentId === undefined) {
+      registrar($, { tipo: 'turno_fin' })
+      if (e.usage?.model) registrar($, { tipo: 'modelo', modelo: e.usage.model })
+      pedirUso($, true)
+    } else {
+      registrar($, { tipo: 'turno_fin', agentId: e.agentId })
+    }
+    return next(e)
+  }).catch(($, e, next) => next(e))
+
+  on('tool.call', async ($, e, next) => {
+    const tool = String(e.tool)
+    const base = e.agentId === undefined ? {} : { agentId: e.agentId }
+    registrar($, { tipo: 'herramienta_inicio', tool, entrada: e as Record<string, unknown>, tool_use_id: e.tool_use_id, ...base })
+    const r = await next(e)
+    registrar($, {
+      tipo: 'herramienta_fin',
+      tool,
+      tool_use_id: e.tool_use_id,
+      ...base,
+      ...(esHerramientaDeAgente(tool) ? lanzamiento(r) : {}),
+    })
+    return r
+  }).catch(($, e, next) => next(e))
+
+  on('classic.PermissionRequest', ($, e, next) => {
+    registrar(
+      $,
+      e.agent_id === undefined
+        ? { tipo: 'permiso', tool: e.tool_name }
+        : { tipo: 'permiso', tool: e.tool_name, agentId: e.agent_id },
+    )
+    return next(e)
+  }).catch(($, e, next) => next(e))
+
+  on('classic.Elicitation', ($, e, next) => {
+    registrar($, { tipo: 'permiso', tool: `MCP ${e.mcp_server_name}` })
+    return next(e)
+  }).catch(($, e, next) => next(e))
+
+  on('classic.Notification', ($, e, next) => {
+    registrar($, { tipo: 'notificacion', notificacion: e.notification_type })
+    return next(e)
+  }).catch(($, e, next) => next(e))
+
+  on('classic.PermissionDenied', ($, e, next) => {
+    registrar($, { tipo: 'permiso_resuelto' })
+    return next(e)
+  }).catch(($, e, next) => next(e))
+
+  on('classic.SubagentStart', ($, e, next) => {
+    registrar($, { tipo: 'subagente_inicio', agentId: e.agent_id, agentType: e.agent_type })
+    return next(e)
+  }).catch(($, e, next) => next(e))
+
+  on('classic.SubagentStop', ($, e, next) => {
+    registrar($, { tipo: 'subagente_fin', agentId: e.agent_id })
+    return next(e)
+  }).catch(($, e, next) => next(e))
+
+  on('classic.PostCompact', ($, e, next) => {
+    registrar($, { tipo: 'compactado' })
+    pedirUso($, false)
+    return next(e)
+  }).catch(($, e, next) => next(e))
+
+  on('classic.CwdChanged', ($, e, next) => {
+    void cambiarDirectorio($, e.new_cwd)
+    return next(e)
+  }).catch(($, e, next) => next(e))
 
   on('command.run', { command: 'configurar' }, async ($, e) => {
     try {

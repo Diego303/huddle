@@ -14,6 +14,13 @@ export type SistemaFalso = {
   respuestaAsk: string | null
   /** Las preguntas que el mod ha hecho con $.ui.ask. */
   preguntas: string[]
+  /** Los procesos lanzados en segundo plano ($.process.spawn): los avisos. */
+  lanzados: string[][]
+  /** Si es true, toda escritura falla (para comprobar que Huddle no rompe nada). */
+  discoRoto: boolean
+  /** Mientras exista, cada escritura espera a que se resuelva (para provocar carreras). */
+  pausa: Promise<void> | null
+  sesion: { id: string; repo: string | null; uso: unknown; agentes: unknown[] }
 }
 
 /** Plantillas de prueba: cualquier lectura bajo .../templates/GENERAL/ se responde con esto. */
@@ -54,6 +61,10 @@ export function crearSistema(inicial: {
     cwd: inicial.cwd,
     respuestaAsk: inicial.respuestaAsk ?? null,
     preguntas: [],
+    lanzados: [],
+    discoRoto: false,
+    pausa: null,
+    sesion: { id: 'sesion-1', repo: null, uso: { startedAt: 0, context: { window: 1000000 }, rateLimits: [] }, agentes: [] },
   }
   for (const f of s.ficheros.keys()) anotarDirs(s, f)
   for (const d of inicial.dirs ?? []) {
@@ -70,7 +81,9 @@ export function instalarSistema(on: On, s: SistemaFalso): void {
     const texto = s.ficheros.get(e.path) ?? plantilla(e.path)
     return texto === undefined ? { deny: `ENOENT: ${e.path}` } : { value: texto }
   })
-  on('fs.write', (_, e) => {
+  on('fs.write', async (_, e) => {
+    if (s.pausa) await s.pausa
+    if (s.discoRoto) return { deny: 'EIO: disco roto' }
     s.ficheros.set(e.path, e.text)
     anotarDirs(s, e.path)
     return { value: undefined }
@@ -100,6 +113,8 @@ export function instalarSistema(on: On, s: SistemaFalso): void {
     s.procesos.push(argv)
     const ok = { value: { exitCode: 0, stdout: '', stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }
     const args = argv.filter(a => a !== '--' && !a.startsWith('-'))
+    if (argv[0] === 'date') return { value: { ...ok.value, stdout: '+0100\n' } }
+    if (argv[0] === 'uname') return { value: { ...ok.value, stdout: 'Linux\n' } }
     if (argv[0] === 'mkdir') {
       for (const d of args.slice(1)) {
         s.dirs.add(d)
@@ -139,4 +154,14 @@ export function instalarSistema(on: On, s: SistemaFalso): void {
     return { result: { questions: e.questions, answers: { [pregunta]: s.respuestaAsk } } }
   })
   on('command.register', (_, e) => ({ value: { command: e.name } }))
+  on('session.id', () => ({ value: s.sesion.id }))
+  on('session.repo', () => ({
+    value: s.sesion.repo === null ? null : { root: s.sesion.repo, remote: null, internal: false, name: null },
+  }))
+  on('session.usage', () => ({ value: s.sesion.uso as never }))
+  on('agent.list', () => ({ value: s.sesion.agentes as never }))
+  on('process.spawn', async function* (_, e) {
+    s.lanzados.push([...e.argv])
+    return { value: { code: 0, signal: null } }
+  })
 }
