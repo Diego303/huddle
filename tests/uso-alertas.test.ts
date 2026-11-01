@@ -6,7 +6,7 @@ import { estadoInicial } from '../lib/estado.ts'
 import { interpretarCi } from '../lib/git.ts'
 import type { DatosPanel } from '../lib/lector.ts'
 import { tokensDesde } from '../lib/lector.ts'
-import { accionesPorReglas, alertasGit, vistaSesiones } from '../lib/panel-datos.ts'
+import { accionesPorReglas, alertasFichas, alertasGit, fichasAtrasadas, vistaSesiones } from '../lib/panel-datos.ts'
 import { texto } from '../mod/lienzo.ts'
 import { componerPanel } from '../mod/panel.ts'
 import { horaLocal, ultimoReinicio } from '../lib/tiempo.ts'
@@ -98,5 +98,32 @@ describe('uso', () => {
     expect(ultimoReinicio(AHORA, 60, 'cuando sea')).toBeNull()
     const t = juntar({ dias: {}, total: 0, tokens: { '2026-10-20T10': 9 } }, a, '2026-10-01', '2026-10-23T00')
     expect(t.tokens).toEqual({ '2026-10-30T20': 100, '2026-10-31T00': 50 })
+  })
+})
+
+describe('fichas que se han quedado atrás', () => {
+  const tocada = Date.parse('2026-10-28T12:00:00+01:00')
+  const commits = (n: number, desde: number) => Array.from({ length: n }, (_, i) => desde + (i + 1) * 3600_000)
+  const git = {
+    struo: { ahead: 0, cambios: 0, sucio_desde: null, commits_ts: [...commits(2, tocada - 86_400_000), ...commits(4, tocada)] },
+    rimor: { ahead: 0, cambios: 0, sucio_desde: null, commits_ts: commits(2, tocada) },
+    hecho: { ahead: 0, cambios: 0, sucio_desde: null, commits_ts: commits(9, tocada) },
+  }
+  const fichas = [
+    { carpeta: 'struo', tareas: { hechas: 2, total: 6 }, mtime: tocada },
+    { carpeta: 'rimor', tareas: { hechas: 1, total: 6 }, mtime: tocada },
+    { carpeta: 'hecho', tareas: { hechas: 5, total: 5 }, mtime: tocada },
+    { carpeta: 'sin-tareas', tareas: { hechas: 0, total: 0 }, mtime: tocada },
+  ]
+
+  test('3 commits o más desde que se tocó la ficha, y solo si le quedan tareas', () => {
+    expect(fichasAtrasadas(fichas, git)).toEqual([{ carpeta: 'struo', commits: 4 }])
+    expect(alertasFichas(fichas, git)).toEqual([{ texto: 'struo: 4 commits desde que se actualizó la ficha · /fichas struo actualizar', nivel: 'aviso' }])
+    // Sin /refresh no hay commits: no se avisa.
+    expect(alertasFichas(fichas, {})).toEqual([])
+  })
+
+  test('y es una de las siguientes acciones por reglas', () => {
+    expect(accionesPorReglas([], git, fichas)).toEqual(['Poner al día la ficha de struo: /fichas struo actualizar'])
   })
 })

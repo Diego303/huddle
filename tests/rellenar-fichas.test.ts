@@ -2,9 +2,9 @@ import { describe, expect, mock, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
 import type { On } from 'claude-code'
 
-import { PROMPT_FICHA, resumenFichas } from '../lib/comandos/fichas.ts'
+import { PROMPT_ACTUALIZAR, PROMPT_FICHA, resumenFichas } from '../lib/comandos/fichas.ts'
 import { estadoInicial } from '../lib/estado.ts'
-import { huecos, interpretarPropuesta, rellenarFicha } from '../lib/fichas.ts'
+import { actualizarFicha, huecos, interpretarActualizacion, interpretarPropuesta, rellenarFicha, tareasDeFicha } from '../lib/fichas.ts'
 import { interpretarFicha } from '../lib/panel-datos.ts'
 import { crearSistema, instalarSistema, PLANTILLAS } from './ayuda/sistema-falso.ts'
 import type { SistemaFalso } from './ayuda/sistema-falso.ts'
@@ -158,7 +158,7 @@ describe('/fichas', () => {
     const r = await correr($)
     expect(r).toContain('Rellenando 2 fichas en segundo plano: struo, web.')
     expect(s.ficheros.has(`${AG}/fichas.en-curso`)).toBe(true)
-    expect(await correr($)).toContain('Ya estoy rellenando fichas')
+    expect(await correr($)).toContain('Ya estoy con las fichas')
     for (let i = 0; i < 20 && s.ficheros.has(`${AG}/fichas.en-curso`); i++) await reloj.advance(100)
     expect(s.ficheros.has(`${AG}/fichas.en-curso`)).toBe(false)
 
@@ -183,5 +183,70 @@ describe('/fichas', () => {
     // Ya completa: no se vuelve a preguntar.
     expect(await correr($, 'struo')).toContain('La ficha de struo ya está completa')
     expect(await correr($, 'nada')).toContain('Uso: /fichas [proyecto]')
+  })
+})
+
+// ------------------------------------------------------- /fichas actualizar
+
+const RELLENA = rellenarFicha(PLANTILLA, interpretarPropuesta(JSON.stringify(RESPUESTA))!, '2026-10-31').texto
+
+describe('poner una ficha al día', () => {
+  test('las tareas en orden, y la respuesta: solo números de tareas que existen', () => {
+    expect(tareasDeFicha(RELLENA).map(t => [t.texto, t.hecha])).toEqual([['API de tareas', true], ['Autenticación', true], ['Panel web', false], ['Desplegar', false]])
+    expect(interpretarActualizacion('```json\n{"hechas":[3,1,9,2.5,3],"fase":"beta","estado":"Ya hay panel."}\n```', 4)).toEqual({ hechas: [1, 3], fase: 'beta', estado: 'Ya hay panel.' })
+    expect(interpretarActualizacion('no sé', 4)).toBeNull()
+  })
+
+  test('marca las hechas, no desmarca nada y pone al día el estado que escribió Claude', () => {
+    const r = actualizarFicha(RELLENA, { hechas: [3], fase: 'beta', estado: 'El panel ya funciona.\nFalta desplegar.' }, '2026-11-01')
+    expect(r.marcadas).toBe(1)
+    expect(r.cambios).toEqual(['1 tarea hecha', 'estado'])
+    // La 1 y la 2 ya estaban hechas y siguen hechas aunque Claude no las nombre.
+    expect(tareasDeFicha(r.texto).map(t => t.hecha)).toEqual([true, true, true, false])
+    expect(r.texto).toContain('## Estado\nEl panel ya funciona.\nFalta desplegar.\n_(actualizado por Claude el 2026-11-01)_\n\n## Tareas')
+    // La fase ya estaba (MVP): no se cambia.
+    expect(r.texto).toContain('fase: MVP')
+    expect(interpretarFicha('struo', r.texto).tareas).toEqual({ hechas: 3, total: 4 })
+  })
+
+  test('lo que escribiste tú no se toca: ni tu estado ni el texto de tus tareas', () => {
+    const tuya = RELLENA.replace(/## Estado\n[\s\S]*?\n\n## Tareas/, '## Estado\nLo escribí yo.\n\n## Tareas').replace('- [ ] Panel web', '- [ ] Panel web (mi nota)')
+    const r = actualizarFicha(tuya, { hechas: [3, 4], fase: 'beta', estado: 'Otro estado.' }, '2026-11-01')
+    expect(r.cambios).toEqual(['2 tareas hechas'])
+    expect(r.texto).toContain('## Estado\nLo escribí yo.\n')
+    expect(r.texto).toContain('- [x] Panel web (mi nota)')
+    expect(actualizarFicha(r.texto, { hechas: [1, 2, 3, 4], fase: '', estado: '' }, 'x').cambios).toEqual([])
+  })
+
+  test('el prompt lleva las tareas numeradas y pide no tocar nada', () => {
+    const p = PROMPT_ACTUALIZAR('struo', '/r/struo', RELLENA)
+    expect(p).toContain('1. [x] API de tareas')
+    expect(p).toContain('3. [ ] Panel web')
+    expect(p).toContain('No modifiques nada')
+    expect(resumenFichas([{ carpeta: 'a', rellenado: ['2 tareas hechas', 'estado'], error: null, coste: 0.1, conSesion: true }], 'actualizar')).toBe('al día: a (2 tareas hechas, estado) · $0.10')
+  })
+})
+
+describe('/fichas actualizar', () => {
+  test('pone al día las fichas con tareas y avisa; sin tareas, lo dice', async ($, on) => {
+    const s = escenario()
+    s.ficheros.set(`${GENERAL}/proyectos/struo.md`, RELLENA)
+    s.responder = argv => {
+      if (argv[0] !== 'claude') return undefined
+      const result = (argv.at(-1) ?? '').includes('/fichas actualizar') ? JSON.stringify({ hechas: [1, 2, 3], fase: 'beta', estado: 'Casi listo.' }) : 'nada'
+      return { stdout: JSON.stringify({ result, is_error: false, permission_denials: [], total_cost_usd: 0.01 }) }
+    }
+    const { reloj, toasts } = await arrancar($, on, s)
+    // web no tiene ficha con tareas: solo struo.
+    const r = await correr($, 'actualizar')
+    expect(r).toContain('Poniendo al día 1 ficha en segundo plano: struo.')
+    for (let i = 0; i < 20 && s.ficheros.has(`${AG}/fichas.en-curso`); i++) await reloj.advance(100)
+    expect(interpretarFicha('struo', s.ficheros.get(`${GENERAL}/proyectos/struo.md`) ?? '').tareas).toEqual({ hechas: 3, total: 4 })
+    expect(s.ficheros.get(`${GENERAL}/proyectos/struo.md`)).toContain('Casi listo.\n_(actualizado por Claude el ')
+    expect(toasts.at(-1)).toContain('al día: struo (1 tarea hecha, estado)')
+    const prompt = s.procesos.filter(a => a[0] === 'claude').at(-1)?.at(-1) ?? ''
+    expect(prompt).toContain('3. [ ] Panel web')
+    // Con el proyecto delante o detrás; y uno sin tareas.
+    expect(await correr($, 'web actualizar')).toContain('La ficha de web no tiene tareas que poner al día')
   })
 })

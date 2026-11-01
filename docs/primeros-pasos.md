@@ -31,6 +31,7 @@ Dentro de Claude Code:
    /refresh
    ```
    `/fichas` hace que Claude mire cada proyecto, en solo lectura, y rellene en su ficha la fase, el estado, las tareas y los próximos pasos. Tarda unos minutos y te avisa al acabar. Revisa lo que proponga: el progreso por proyecto sale de esas tareas (`- [ ]` pendiente, `- [x]` hecha).
+5. Cuando los proyectos avancen, `/fichas actualizar` (o `/fichas <proyecto> actualizar`) marca como hechas las tareas que ya estén terminadas, y el porcentaje sube solo.
 
 ## 3. Uso diario
 
@@ -41,7 +42,8 @@ cd /mnt/d/GitHub/GENERAL && claude
 
 - El panel sale solo, a la derecha. En un terminal de menos de 144 columnas, ábrelo con `/panel`.
 - `/oficina` y `/panel` cambian de vista.
-- Al acabar el día: `/cierre`.
+- Al acabar el día: `/cierre`. Además del resumen, pone al día las fichas de los proyectos que tocaste (las tareas hechas suben el %).
+- Si el Panel te avisa de que una ficha «se ha quedado atrás», escribe lo que te propone: `/fichas <proyecto> actualizar`.
 
 ## 4. Vista web en el navegador
 

@@ -98,8 +98,8 @@ async function registrarComandos($: EngineInterface): Promise<void> {
   })
   await $.command.register({
     name: 'fichas',
-    description: 'Huddle: Claude rellena lo que falta en las fichas (fase, estado, tareas…), en solo lectura',
-    argumentHint: '[proyecto]',
+    description: 'Huddle: Claude rellena lo que falta en las fichas; con «actualizar», marca las tareas ya hechas',
+    argumentHint: '[proyecto] [actualizar]',
   })
   await $.command.register({
     name: 'abrir',
