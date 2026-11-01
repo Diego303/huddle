@@ -31,6 +31,7 @@ Dentro de Claude Code:
    /refresh
    ```
    `/fichas` hace que Claude mire cada proyecto, en solo lectura, y rellene en su ficha la fase, el estado, las tareas y los próximos pasos. Tarda unos minutos y te avisa al acabar. Revisa lo que proponga: el progreso por proyecto sale de esas tareas (`- [ ]` pendiente, `- [x]` hecha).
+5. Cuando los proyectos avancen, `/fichas actualizar` (o `/fichas <proyecto> actualizar`) marca como hechas las tareas que ya estén terminadas, y el porcentaje sube solo.
 
 ## 3. Uso diario
 

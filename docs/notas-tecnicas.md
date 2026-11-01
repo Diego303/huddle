@@ -380,3 +380,10 @@ Se acercó el panel a la maqueta con lo que permite el terminal. Lo que hay y c�
   - *Buscador y uso:* el buscador encontró la edición sembrada de hace 3 días, y el uso por proyecto salió de los tokens reales del transcript.
   - *Fallo encontrado y corregido:* la sesión miraba si habías ignorado su atasco cada 2 s de reloj. Ahora mira la fecha del fichero en cada volcado, que es más barato y no depende del reloj.
 
+## 17. `/fichas actualizar` (2026-11-01)
+
+- **Por qué:** `/fichas` solo rellena lo vacío, así que una ficha con tareas no volvía a mirarse aunque el proyecto avanzara, y el porcentaje se quedaba quieto. `/refresh` no toca las fichas.
+- **Qué hace:** `/fichas actualizar` (todas las fichas con tareas) o `/fichas <proyecto> actualizar` (en cualquier orden). Hace la misma consulta en solo lectura que `/fichas` (una bifurcación de la sesión si está quieta, o `claude -p` en el repo), con las tareas numeradas y su marca actual. Claude responde `{"hechas":[…],"fase":"…","estado":"…"}`.
+- **Qué escribe:** pasa a `[x]` las tareas cuyo número viene en `hechas`. Nunca desmarca una tarea (si tú la marcaste y Claude no la nombra, sigue hecha) ni cambia su texto. El estado se reescribe solo si está vacío o es de Claude (la línea «_(propuesto/actualizado por Claude el …)_»), y deja la marca «actualizado por Claude» con la fecha; la fase, solo si está vacía. Números fuera de rango o repetidos se descartan. La ficha se vuelve a leer justo antes de escribir.
+- Comparte con `/fichas` el segundo plano, el cerrojo, el aviso y la línea del registro (`/fichas actualizar · al día: struo (2 tareas hechas, estado)`).
+

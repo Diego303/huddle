@@ -201,3 +201,92 @@ export function rellenarFicha(texto: string, p: Propuesta, dia: string): { texto
   if (!final.endsWith('\n')) final += '\n'
   return { texto: final, rellenado }
 }
+
+// ------------------------------------------- /fichas actualizar: poner al día
+
+/** Las casillas de `## Tareas`, en orden. */
+export function tareasDeFicha(texto: string): { texto: string; hecha: boolean }[] {
+  const lineas = texto.split(/\r?\n/)
+  const t = tramo(lineas, 'Tareas')
+  if (t === null) return []
+  const out: { texto: string; hecha: boolean }[] = []
+  for (const l of lineas.slice(t.inicio + 1, t.fin)) {
+    const m = /^\s*[-*+]\s+\[([ xX])\]\s*(.*)$/.exec(l)
+    if (m) out.push({ texto: m[2]!.trim(), hecha: m[1] !== ' ' })
+  }
+  return out
+}
+
+export type Actualizacion = { hechas: number[]; fase: string; estado: string }
+
+/** La respuesta de Claude: los números (desde 1) de las tareas ya terminadas, la fase y el estado. */
+export function interpretarActualizacion(texto: string, total: number): Actualizacion | null {
+  const i = texto.indexOf('{')
+  const j = texto.lastIndexOf('}')
+  if (i < 0 || j <= i) return null
+  let v: Record<string, unknown>
+  try {
+    v = JSON.parse(texto.slice(i, j + 1)) as Record<string, unknown>
+  } catch {
+    return null
+  }
+  if (!v || !Array.isArray(v.hechas)) return null
+  const hechas = [...new Set(v.hechas.filter((n): n is number => Number.isInteger(n) && n >= 1 && n <= total))].sort((a, b) => a - b)
+  const estado = typeof v.estado === 'string' ? v.estado.split(/\r?\n/).map(l => linea(l, MAX_FRASE)).filter(Boolean).slice(0, 3).join('\n') : ''
+  return { hechas, fase: linea(v.fase).slice(0, 30), estado }
+}
+
+/** Lo que escribió Claude lleva su marca: eso sí se puede poner al día. */
+const MARCA_CLAUDE = /^_\((?:propuesto|actualizado) por Claude el [^)]*\)_$/
+
+/**
+ * Pone la ficha al día: marca como hechas las tareas que lo están (nunca
+ * desmarca ni cambia su texto), y el estado y la fase solo si están vacíos o
+ * los escribió Claude. Lo que hayas escrito tú no se toca.
+ */
+export function actualizarFicha(texto: string, a: Actualizacion, dia: string): { texto: string; marcadas: number; cambios: string[] } {
+  let lineas = texto.split(/\r?\n/)
+  const cambios: string[] = []
+  let marcadas = 0
+
+  const t = tramo(lineas, 'Tareas')
+  if (t !== null) {
+    let n = 0
+    const hechas = new Set(a.hechas)
+    for (let k = t.inicio + 1; k < t.fin; k++) {
+      const m = /^(\s*[-*+]\s+)\[([ xX])\](.*)$/.exec(lineas[k]!)
+      if (!m) continue
+      n += 1
+      if (m[2] === ' ' && hechas.has(n)) {
+        lineas[k] = `${m[1]}[x]${m[3]}`
+        marcadas += 1
+      }
+    }
+    if (marcadas > 0) cambios.push(`${marcadas} ${marcadas === 1 ? 'tarea hecha' : 'tareas hechas'}`)
+  }
+
+  const faltan = new Set(huecos(lineas.join('\n')))
+  if (faltan.has('fase') && a.fase !== '') {
+    const cierre = lineas[0] === '---' ? lineas.findIndex((l, k) => k > 0 && l === '---') : -1
+    const k = lineas.findIndex((l, n) => n > 0 && n < cierre && /^fase:/.test(l))
+    if (k > 0) {
+      lineas[k] = `fase: ${a.fase}`
+      cambios.push('fase')
+    }
+  }
+
+  const e = tramo(lineas, 'Estado')
+  if (a.estado !== '' && e !== null) {
+    const contenido = lineas.slice(e.inicio + 1, e.fin).filter(l => !esComentario(l) && l.trim() !== '')
+    const deClaude = faltan.has('Estado') || contenido.some(l => MARCA_CLAUDE.test(l.trim()))
+    if (deClaude) {
+      const sigue = e.fin < lineas.length
+      lineas = [...lineas.slice(0, e.inicio + 1), ...a.estado.split('\n'), `_(actualizado por Claude el ${dia})_`, ...(sigue ? [''] : []), ...lineas.slice(e.fin)]
+      cambios.push('estado')
+    }
+  }
+
+  let final = lineas.join('\n')
+  if (!final.endsWith('\n')) final += '\n'
+  return { texto: final, marcadas, cambios }
+}
