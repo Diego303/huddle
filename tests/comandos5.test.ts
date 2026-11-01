@@ -274,5 +274,8 @@ describe('comandos de la Fase 5', () => {
     expect(r).toContain('Hoy 1/2')
     expect(r).toContain('Proyectos tocados: struo')
     expect(s.ficheros.get(`${GENERAL}/ESTADO.md`)).toContain('- [ ] Probar refresh')
+    // La ficha de struo (con tareas) se pone al día en segundo plano.
+    expect(r).toContain('Pongo al día las fichas de struo (tareas hechas y estado)')
+    expect(s.ficheros.has(`${AG}/fichas.en-curso`)).toBe(true)
   })
 })

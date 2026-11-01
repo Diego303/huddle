@@ -16,6 +16,7 @@ import type { FichaPanel, SesionVista } from '../lib/panel-datos.ts'
 import {
   accionesPorReglas,
   alertasBasicas,
+  alertasFichas,
   alertasGit,
   bocadillo,
   contadores,
@@ -127,7 +128,7 @@ export type Ctx = {
 }
 
 function listaAlertas(c: Ctx) {
-  const todas = [...alertasBasicas(c.vistas, c.d.sinClasificar), ...alertasGit(c.d.git ?? {}, c.ahora)]
+  const todas = [...alertasBasicas(c.vistas, c.d.sinClasificar), ...alertasGit(c.d.git ?? {}, c.ahora), ...alertasFichas(c.d.fichas, c.d.git ?? {})]
   // Las graves primero; «sin clasificar» al final.
   const peso = (a: { nivel: string; texto: string }) => (a.texto.includes('sin clasificar') ? 2 : a.nivel === 'grave' ? 0 : 1)
   return todas.sort((a, b) => peso(a) - peso(b))
@@ -440,7 +441,7 @@ function tarjetaActividad(c: Ctx, w: number, alto?: number): Linea[] {
 function tarjetaSiguiente(c: Ctx, w: number, alto?: number): Linea[] {
   const dentro = interior(w, c.aire)
   const porReglas = c.d.siguiente.length === 0
-  const acciones = porReglas ? accionesPorReglas(c.vistas, c.d.git ?? {}) : c.d.siguiente
+  const acciones = porReglas ? accionesPorReglas(c.vistas, c.d.git ?? {}, c.d.fichas) : c.d.siguiente
   const max = alto === undefined ? 6 : Math.max(1, alto - 2)
   const lineas: Linea[] = []
   acciones.forEach((a, i) => {

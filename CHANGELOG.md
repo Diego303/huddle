@@ -19,6 +19,7 @@ Primera versión.
 ### Comandos
 - `/configurar`, `/directorio`, `/proyectos`: carpeta de control, `PROYECTOS.md` y fichas.
 - `/refresh`: git de los repos en seguimiento en paralelo (10 repos en `/mnt/d` en ~1 s), `ESTADO.md` con «Hoy» conservado, registro, y la redacción de Claude.
+- Aviso de ficha atrasada (tareas pendientes y 3 commits o más desde que se tocó) en las alertas y la siguiente acción; `/cierre` pone al día las fichas de los proyectos tocados hoy.
 - `/fichas [proyecto] actualizar`: Claude marca como hechas las tareas ya terminadas (sin desmarcar nada ni tocar su texto) y pone al día el estado que había escrito él.
 - `/fichas [proyecto]`: Claude rellena en solo lectura lo que falta en las fichas (fase, estado, tareas, próximos pasos), preguntando a una bifurcación de la sesión del proyecto si está en pausa, o a un `claude -p` en su repo. No toca lo que ya hayas escrito.
 - `/proyecto [tests]`, `/preguntar` (solo lectura, con bifurcación de la sesión si se puede), `/abrir` (Windows Terminal), `/registro` y `/cierre`.

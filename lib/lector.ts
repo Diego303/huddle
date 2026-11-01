@@ -28,6 +28,8 @@ export type GitPanel = {
   sucio_desde: string | null
   error: string | null
   ci: 'ok' | 'fallo' | 'en_curso' | null
+  /** Los commits de la última semana (ms), para avisar de fichas que se han quedado atrás. */
+  commits_ts?: number[]
 }
 
 /** Uso estimado (`≈`) con los tokens locales y `limites`, solo si no hay dato oficial. */
@@ -248,7 +250,7 @@ export async function leerPanel($: EngineInterface, config: Config, desfase: num
     ignorados,
     limites: config.limites,
     git: Object.fromEntries(
-      Object.entries(git?.repos ?? {}).map(([c, r]) => [c, { rama: r.rama, ahead: r.ahead, cambios: r.cambios, sucio_desde: r.sucio_desde, error: r.error, ci: r.ci ?? null }]),
+      Object.entries(git?.repos ?? {}).map(([c, r]) => [c, { rama: r.rama, ahead: r.ahead, cambios: r.cambios, sucio_desde: r.sucio_desde, error: r.error, ci: r.ci ?? null, commits_ts: r.commits_ts ?? [] }]),
     ),
   }
 }

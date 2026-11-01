@@ -14,6 +14,7 @@ import type { EstadoRex, EstadoVisible, SesionVista } from './panel-datos.ts'
 import {
   accionesPorReglas,
   alertasBasicas,
+  alertasFichas,
   alertasGit,
   bocadillo,
   COLOR_ROL,
@@ -341,7 +342,7 @@ export function modeloWeb(d: DatosPanel, ahora: number, generado: string, lectur
       color: v.s.contexto_pct === null ? WEB.inactiva : colorUmbral(v.s.contexto_pct),
     }))
 
-  const alertas = [...alertasBasicas(vistas, d.sinClasificar), ...alertasGit(d.git ?? {}, ahora)]
+  const alertas = [...alertasBasicas(vistas, d.sinClasificar), ...alertasGit(d.git ?? {}, ahora), ...alertasFichas(d.fichas, d.git ?? {})]
     .sort((a, b) => (a.nivel === b.nivel ? 0 : a.nivel === 'grave' ? -1 : 1))
     .map(a => ({ texto: a.texto, grave: a.nivel === 'grave' }))
 
@@ -352,7 +353,7 @@ export function modeloWeb(d: DatosPanel, ahora: number, generado: string, lectur
   const alto = (v: number | null) => (v === null || v <= 0 || tope <= 0 ? 0 : Math.max(4, Math.round((v / tope) * 100)))
 
   const porReglas = d.siguiente.length === 0
-  const acciones = porReglas ? accionesPorReglas(vistas, d.git ?? {}) : d.siguiente
+  const acciones = porReglas ? accionesPorReglas(vistas, d.git ?? {}, d.fichas) : d.siguiente
 
   const u = d.uso
   const e = d.usoEstimado ?? null

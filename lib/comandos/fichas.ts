@@ -226,3 +226,25 @@ async function actualizar($: EngineInterface, config: Config, candidatas: readon
     'El estado y la fase solo se reescriben si están vacíos o los escribió Claude. El porcentaje se actualiza en el panel en cuanto cada ficha está; al acabar te aviso.',
   ].join('\n')
 }
+
+/**
+ * Para /cierre: pone al día, en segundo plano, las fichas (con tareas) de los
+ * proyectos que se tocaron hoy. Devuelve la línea que lo cuenta, o '' si no hay nada.
+ */
+export async function actualizarTocados($: EngineInterface, config: Config, carpetas: readonly string[]): Promise<string> {
+  if (carpetas.length === 0) return ''
+  const cerrojo = unir(config.general_dir, '.agentos', 'fichas.en-curso')
+  const desde = Number((await leerTexto($, cerrojo)) ?? '')
+  if (Number.isFinite(desde) && desde > 0 && Date.now() - desde < CERROJO_MS) return 'Las fichas ya se están poniendo al día.'
+  const nombres = new Set(carpetas.map(c => c.toLowerCase()))
+  const conTareas: Entrada[] = []
+  for (const e of await seguimiento($, config)) {
+    if (!nombres.has(e.carpeta.toLowerCase())) continue
+    const texto = await leerTexto($, unir(config.general_dir, 'proyectos', ficheroFicha(e.carpeta)))
+    if (texto !== undefined && tareasDeFicha(texto).length > 0) conTareas.push(e)
+  }
+  if (conTareas.length === 0) return ''
+  await escribirAtomico($, cerrojo, String(Date.now()))
+  lanzar($, config, conTareas, cerrojo, 'actualizar')
+  return `Pongo al día las fichas de ${conTareas.map(e => e.carpeta).join(', ')} (tareas hechas y estado), en segundo plano: te aviso al acabar.`
+}

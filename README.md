@@ -154,7 +154,7 @@ cd /mnt/d/GitHub/GENERAL && claude
 | `/fichas [proyecto] actualizar` | Claude pone las fichas al día: marca como hechas las tareas ya terminadas (y con eso sube el %) y reescribe el estado si lo había escrito él |
 | `/abrir <proyecto>` | Abre una pestaña nueva de terminal con Claude Code en ese proyecto |
 | `/registro "<texto>"` | Apunta algo en el diario |
-| `/cierre` | Resumen del día y próximos pasos; desmarca «Hoy» para mañana |
+| `/cierre` | Resumen del día y próximos pasos; desmarca «Hoy» para mañana y pone al día las fichas de los proyectos que tocaste hoy |
 | `/proyectos` | Busca carpetas nuevas en tu directorio de proyectos |
 | `/directorio <ruta>` | Cambia el directorio donde viven tus proyectos |
 | `/configurar` | Configuración inicial |
@@ -269,6 +269,8 @@ El contexto de cada sesión y el uso de 5 h y semanal son los datos oficiales de
 **`/preguntar` en solo lectura:** si la sesión del proyecto está en pausa o inactiva, se retoma en una bifurcación (`--fork-session`) que no se guarda; si está trabajando o no hay ninguna, se lanza un `claude -p` nuevo en el repo. En los dos casos solo puede leer ficheros y ejecutar `git log/status/diff/show`, `ls`, `grep`, `rg`, `cat`, `head` y `wc`.
 
 **`/fichas`:** hace esa misma consulta por cada proyecto en seguimiento (tres a la vez) y le pide a Claude la fase, el objetivo, el estado, las tareas (marcando como hechas las que el código o el git muestran terminadas), los bloqueos y los próximos pasos. Solo rellena lo que sigue como en la plantilla: lo que hayas escrito tú no se toca. Lo propuesto lleva la marca «propuesto por Claude». El progreso por proyecto sale de esas casillas. Al acabar, avisa y lo apunta en el registro con el coste.
+
+**Fichas al día sin acordarte:** el Panel avisa cuando una ficha se ha quedado atrás, es decir, cuando tiene tareas pendientes y su proyecto lleva 3 commits o más (según el último `/refresh`) desde que se tocó la ficha: «struo: 4 commits desde que se actualizó la ficha · /fichas struo actualizar». También sale en la siguiente acción. Y `/cierre`, al acabar el día, pone al día por su cuenta las fichas de los proyectos que tocaste.
 
 **`/fichas actualizar`** (o `/fichas <proyecto> actualizar`): para cuando el proyecto ha avanzado. Con la misma consulta en solo lectura, Claude dice qué tareas de la ficha están ya terminadas, y Huddle las marca con `[x]`, que es de donde sale el porcentaje. Nunca desmarca una tarea ni cambia su texto, aunque la hayas escrito tú. El estado se reescribe solo si está vacío o lo escribió Claude (lleva su marca «propuesto/actualizado por Claude»), y la fase solo si está vacía.
 

@@ -1,6 +1,7 @@
 // /cierre: el resumen del día. Huddle apunta los números en el registro y
 // desmarca «Hoy» para mañana; Claude escribe el resumen y actualiza los
-// próximos pasos de los proyectos tocados hoy.
+// próximos pasos de los proyectos tocados hoy. Además, las fichas de esos
+// proyectos se ponen al día (/fichas actualizar) en segundo plano.
 
 import type { EngineInterface } from 'claude-code'
 
@@ -13,6 +14,7 @@ import { encolarPrompt } from '../encolar.ts'
 import { unir } from '../rutas.ts'
 import { desfaseActual } from '../sesion.ts'
 import { diaLocal } from '../tiempo.ts'
+import { actualizarTocados } from './fichas.ts'
 import { apuntar } from './registro.ts'
 
 /** Desmarca las casillas de «## Hoy» y deja el resto igual. */
@@ -85,12 +87,14 @@ export async function cierre($: EngineInterface): Promise<string> {
   )
   if (hoy.total > 0) await escribirAtomico($, rutaEstado, desmarcarHoy(estado))
   encolarPrompt($, PROMPT_CIERRE({ registro: rutaRegistro, fichas, hoy: hoyLineas, dia }))
+  const alDia = await actualizarTocados($, config, tocados).catch(() => '')
 
   return [
     `Cierre del ${dia}: ${nTurnos} turno(s), ${git ? `${nCommits} commit(s)` : 'commits n/d'}, Hoy ${hoy.hechas}/${hoy.total}.`,
     tocados.length > 0 ? `Proyectos tocados: ${tocados.join(', ')}` : 'Hoy no se tocó ningún proyecto en seguimiento.',
     hoy.total > 0 ? '«Hoy» queda desmarcado para mañana.' : '',
     'Ahora Claude escribe el resumen y los próximos pasos.',
+    alDia,
   ]
     .filter(Boolean)
     .join('\n')

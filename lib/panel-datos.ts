@@ -220,7 +220,32 @@ export function bocadillo(estado: EstadoRex, vistas: readonly SesionVista[], fic
 export type Alerta = { texto: string; nivel: 'aviso' | 'grave' }
 
 /** Lo que las alertas usan de git (de /refresh). */
-export type GitAlerta = { ahead: number; cambios: number; sucio_desde: string | null; ci?: 'ok' | 'fallo' | 'en_curso' | null }
+export type GitAlerta = { ahead: number; cambios: number; sucio_desde: string | null; ci?: 'ok' | 'fallo' | 'en_curso' | null; commits_ts?: number[] }
+
+/** Commits desde que se tocó una ficha para avisar de que se ha quedado atrás. */
+export const COMMITS_FICHA_ATRASADA = 3
+
+/** Lo que el aviso de ficha atrasada usa de cada ficha: sus casillas y cuándo se tocó. */
+export type FichaFecha = { carpeta: string; tareas: Casillas; mtime: number }
+
+/**
+ * Fichas que se han quedado atrás: con tareas pendientes y al menos
+ * COMMITS_FICHA_ATRASADA commits (de /refresh) desde la última vez que se tocaron.
+ */
+export function fichasAtrasadas(fichas: readonly FichaFecha[], git: Readonly<Record<string, GitAlerta>>): { carpeta: string; commits: number }[] {
+  const out: { carpeta: string; commits: number }[] = []
+  for (const f of fichas) {
+    if (f.tareas.total === 0 || f.tareas.hechas >= f.tareas.total || !(f.mtime > 0)) continue
+    const g = git[f.carpeta] ?? Object.entries(git).find(([k]) => k.toLowerCase() === f.carpeta.toLowerCase())?.[1]
+    const n = (g?.commits_ts ?? []).filter(t => t > f.mtime).length
+    if (n >= COMMITS_FICHA_ATRASADA) out.push({ carpeta: f.carpeta, commits: n })
+  }
+  return out
+}
+
+export function alertasFichas(fichas: readonly FichaFecha[], git: Readonly<Record<string, GitAlerta>>): Alerta[] {
+  return fichasAtrasadas(fichas, git).map(f => ({ texto: `${f.carpeta}: ${f.commits} commits desde que se actualizó la ficha · /fichas ${f.carpeta} actualizar`, nivel: 'aviso' }))
+}
 
 const TRES_DIAS = 3 * 86_400_000
 
@@ -255,12 +280,13 @@ export function alertasBasicas(vistas: readonly SesionVista[], sinClasificar: nu
  * Siguiente acción por reglas si ESTADO.md no tiene (§2.5): primero las
  * sesiones que te esperan, luego las de contexto alto y después los commits sin push.
  */
-export function accionesPorReglas(vistas: readonly SesionVista[], git: Readonly<Record<string, GitAlerta>> = {}): string[] {
+export function accionesPorReglas(vistas: readonly SesionVista[], git: Readonly<Record<string, GitAlerta>> = {}, fichas: readonly FichaFecha[] = []): string[] {
   const r: string[] = []
   for (const v of vistas) if (v.estado === 'te_espera') r.push(`Atender ${v.etiqueta}: ${v.s.detalle}`)
   for (const v of vistas) {
     if (v.estado !== 'inactiva' && (v.s.contexto_pct ?? 0) >= 80) r.push(`Compactar ${v.etiqueta} (${v.s.contexto_pct} %)`)
   }
   for (const [p, g] of Object.entries(git)) if (g.ahead > 0) r.push(`Push en ${p} (${g.ahead} commit${g.ahead === 1 ? '' : 's'} sin subir)`)
+  for (const f of fichasAtrasadas(fichas, git)) r.push(`Poner al día la ficha de ${f.carpeta}: /fichas ${f.carpeta} actualizar`)
   return r.slice(0, 3)
 }

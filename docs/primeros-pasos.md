@@ -42,7 +42,8 @@ cd /mnt/d/GitHub/GENERAL && claude
 
 - El panel sale solo, a la derecha. En un terminal de menos de 144 columnas, ábrelo con `/panel`.
 - `/oficina` y `/panel` cambian de vista.
-- Al acabar el día: `/cierre`.
+- Al acabar el día: `/cierre`. Además del resumen, pone al día las fichas de los proyectos que tocaste (las tareas hechas suben el %).
+- Si el Panel te avisa de que una ficha «se ha quedado atrás», escribe lo que te propone: `/fichas <proyecto> actualizar`.
 
 ## 4. Vista web en el navegador
 
