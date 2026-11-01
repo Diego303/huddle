@@ -31,4 +31,4 @@ Primera versión.
 - Pestaña **Actividad**: atascos (comando en bucle, fichero en bucle y sin progreso, con un aviso por atasco), cronograma de hoy con las métricas de espera, bitácora de cada sesión con buscador de 7 días y uso de 5 h y semanal por proyecto. Datos nuevos en `.agentos/bitacora/` y `.agentos/tramos/`, que se borran a los 7 días; `/huddle ignorar <id>`.
 
 ### Alertas
-- Contexto ≥ 80 %, sesión esperando más de 5 min, commits sin push, cambios sin commitear más de 3 días, CI en rojo (con `gh`) y carpetas sin clasificar.
+- Contexto ≥ 80 %, sesión esperando más de 5 min, commits sin push, cambios sin commitear más de 3 días, CI en rojo (con `gh`), carpetas sin clasificar y fichas atrasadas (tareas pendientes y 3 commits o más desde que se tocó la ficha).
